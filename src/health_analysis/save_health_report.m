@@ -37,8 +37,8 @@ classdef save_health_report
                 
                 fileName=fullfile(this.folderLocation,sprintf('Health_Report_%d.mat',detectorID));
                 if(exist(fileName,'file'))
-                    dataAll=load(fileName);                    
-                    for j=1:length(data)
+                    load(fileName);                    
+                    for j=1:size(data,1)
                         if(~ismember(data(j,1:4),dataAll(:,1:4),'rows'))
                             dataAll(end+1,:)=data(j,:);
                         end
@@ -56,7 +56,7 @@ classdef save_health_report
     
     methods(Static)
         function [dataOut]=struct2matrix_health_report(dataIn)
-            dataOut=[[dataIn.DetectorID]', [dataIn.Year]', [dataIn.Month]', [dataIn.Day]'...
+            dataOut=[[dataIn.DetectorID]', [dataIn.Year]', [dataIn.Month]', [dataIn.Day]',[dataIn.DateNum]'...
                 [dataIn.MissingRate]',[dataIn.InconsistencyRate]',[dataIn.BreakPoints]',[dataIn.Health]'];
         end
     end
