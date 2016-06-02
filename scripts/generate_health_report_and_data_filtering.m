@@ -22,11 +22,11 @@ fileList=dp.obtain_file_list(dp.folderLocation);
 % Define the parameters
 params=struct(...
     'timeInterval',             300,...      % Five-minute data, default
-    'threshold',                400,...      % Threshold for break points: absolute difference in vph
+    'threshold',                200,...      % Threshold for break points: difference in percentage
     'criteria_good',            struct(...   % Criteria to say a detector is good
-    'MissingRate',         5,...
-    'InconsistencyRate',   10,...
-    'BreakPoints',         10));
+    'MissingRate',         5,...  % Percentage
+    'InconsistencyRate',   15,... % Percentage
+    'BreakPoints',         40));  % # of break points
 
 % Health analysis
 numFile=size(fileList,1);
@@ -45,6 +45,22 @@ for i=1:numFile
         hc.measures=hc.health_criteria;
         
         health_report(end+1:end+length(hc.measures))=hc.measures;
+        
+        % Run data filtering analysis
+        params_filtering=struct(...
+            'interval', hc.interval,...
+            'threshold', hc.threshold,...
+            'imputation', struct(... % Settings for imputation
+            'k', 5,...
+            'medianValue', false),...
+            'smoothing', struct(... % Settings for smoothing: smooth
+            'span', 0.02,...
+            'method','moving',...
+            'degree', nan));
+        
+        % Data filtering and smoothing
+        folderLocationFiltering=findFolder.outputs;
+        data_filtering(folderLocationFiltering,params_filtering,hc.data,hc.measures);
         
         tmpList=[tmpList;{fileList(i).name}];
     end

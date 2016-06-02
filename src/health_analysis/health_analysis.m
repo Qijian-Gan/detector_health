@@ -82,10 +82,11 @@ classdef health_analysis
                 status=0;
             end
             
-            % Too many break points
-            if(metrics.BreakPoints>=this.criteria_good.BreakPoints)
-                status=0;
-            end          
+            % Not a realiable metric currently            
+%             % Too many break points
+%             if(metrics.BreakPoints>=this.criteria_good.BreakPoints)
+%                 status=0;
+%             end          
             
         end
         
@@ -120,11 +121,12 @@ classdef health_analysis
         
         function [numPoints]=check_number_of_break_points(data,interval,threshold)
             diff=[data(2:end,5)-data(1:end-1,5), abs(data(2:end,6)-data(1:end-1,6)),...
-                data(1:end-1,6),data(2:end,6)];
+                data(1:end-1,6),data(2:end,6),min([data(1:end-1,6),data(2:end,6)]')'];
             
             diff=diff(diff(:,1)==interval,:);
+            diff=diff(diff(:,end)>0,:);
 
-            idx=(diff(:,2)>=threshold);
+            idx=((diff(:,2)./diff(:,end)*100)>=threshold);
             numPoints=sum(idx);
         end
         

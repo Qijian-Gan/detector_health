@@ -41,8 +41,7 @@ classdef load_config
                 'RoadName',             nan,...
                 'Direction',            nan,...
                 'SensorID',             nan,...
-                'Location',             nan,...
-                'Status',               nan),numDetector,1);
+                'Location',             nan),numDetector,1);
             
             for i=1:numDetector
                 tmpConfig(i).IntersectionID=num(i,1);
@@ -53,8 +52,7 @@ classdef load_config
                 tmpConfig(i).City=char(txt(i+1,4));
                 tmpConfig(i).RoadName=char(txt(i+1,5));
                 tmpConfig(i).Direction=char(txt(i+1,6));
-                tmpConfig(i).Location=char(txt(i+1,8));
-                tmpConfig(i).Status=char(txt(i+1,9));
+                tmpConfig(i).Location=char(txt(i+1,8));              
             end
         end
     end
