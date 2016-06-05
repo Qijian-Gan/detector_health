@@ -49,7 +49,7 @@ classdef extract_health_report
            numDay=EndDateID-StartDateID+1;
             
            performance=zeros(numDetector,numDay);
-           avgPerformance=zeros(1,numDay);
+           avgPerformance=zeros(3,numDay);
            
            for i=1:numDetector
                id=DetectorIDs{i};
@@ -69,7 +69,9 @@ classdef extract_health_report
                end
            end          
            
-           avgPerformance= mean(performance>0)*100;
+           avgPerformance(1,:)= mean(performance>0)*100;
+           avgPerformance(2,:)= mean(performance==0)*100;
+           avgPerformance(3,:)= mean(performance<0)*100;
            
            this.write_to_excel(DetectorIDs,StartDateID,EndDateID,performance,avgPerformance);
         end
@@ -80,11 +82,12 @@ classdef extract_health_report
             
             dateString=datestr((StartDateID:EndDateID));
             
+            %*****Writing daily performance ******
             % Write the header
             xlswrite(outputFileName,[{'Intersection Name', 'Intersection ID','County','City','Road Name','Direction',...
-                'Sensor ID','Location'},cellstr(dateString)']);
+                'Sensor ID','Movement','Status','Detour Route'},cellstr(dateString)'],'Daily Report');
             
-            % Write Intersection and detector information
+            % Write intersection and detector information
             xlswrite(outputFileName,[{this.DetectorList.detectorConfig.IntersectionName}',...
                 {this.DetectorList.detectorConfig.IntersectionID}',...
                 {this.DetectorList.detectorConfig.County}',...
@@ -92,17 +95,53 @@ classdef extract_health_report
                 {this.DetectorList.detectorConfig.RoadName}',...
                 {this.DetectorList.detectorConfig.Direction}',...
                 {this.DetectorList.detectorConfig.SensorID}',...
-                {this.DetectorList.detectorConfig.Location}'],sprintf('A2:H%d',length(DetectorIDs)+1));
+                {this.DetectorList.detectorConfig.Movement}',...
+                {this.DetectorList.detectorConfig.Status}',...
+                {this.DetectorList.detectorConfig.DetourRoute}'],'Daily Report',sprintf('A2:J%d',length(DetectorIDs)+1));
             
-            % Write Performance            
+            % Write daily performance            
             performanceGrade=extract_health_report.convert_from_number_to_Grade(performance);
-            endColumn=8+size(performanceGrade,2);
-            asciiEndColumn = char(endColumn+'A'-1);
-            xlswrite(outputFileName,performanceGrade,sprintf('I2:%s%d',asciiEndColumn,size(performanceGrade,1)+1));
+            endColumn=10+size(performanceGrade,2);
+            numRound=floor(endColumn/26);
+            if(numRound>0)
+                firstChar=char(numRound+'A'-1);
+                secondChar=char(mod(endColumn,26)+'A'-1);                
+                asciiEndColumn = strcat(firstChar,secondChar);
+            else
+                asciiEndColumn = char(endColumn+'A'-1);
+            end
+            xlswrite(outputFileName,performanceGrade,'Daily Report',sprintf('K2:%s%d',asciiEndColumn,size(performanceGrade,1)+1));
             
-            xlswrite(outputFileName,avgPerformance,sprintf('I%d:%s%d',size(performanceGrade,1)+2,...
-                asciiEndColumn,size(performanceGrade,1)+2));
+            xlswrite(outputFileName,[{'Daily Good (%)'};{'Daily Bad (%)'};{'Daily No Data (%)'}],...
+                'Daily Report',sprintf('J%d:J%d',size(performanceGrade,1)+2,size(performanceGrade,1)+4));
+            xlswrite(outputFileName,avgPerformance,'Daily Report',sprintf('K%d:%s%d',size(performanceGrade,1)+2,...
+                asciiEndColumn,size(performanceGrade,1)+1+size(avgPerformance,1)));
             
+            %*****Writing daily performance ******
+            numDay=size(avgPerformance,2);
+            if(numDay>=7) % Only provide weekly report when the number of days greater than or equal to one week
+                xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.DetectorList.city}],'Weekly Report');
+                
+                xlswrite(outputFileName,[{'Good'}, {'Bad'},{'No Data'}],'Weekly Report','B2:D2');
+                
+                numWeek=floor(numDay/7);
+                weeklyPerformance=zeros(numWeek,3);
+                for i=1:numWeek
+                    for j=1:3
+                        weeklyPerformance(i,j)=mean(avgPerformance(j,(i-1)*7+1:i*7));
+                    end                    
+                end
+                
+                xlswrite(outputFileName,weeklyPerformance,'Weekly Report',sprintf('B3:D%d',numWeek+2));
+                
+                weekStart=cellstr(datestr(StartDateID:7:StartDateID+7*(numWeek-1)));
+                weekEnd=cellstr(datestr(StartDateID+6:7:StartDateID+6+7*(numWeek-1)));
+                
+                weekstr= strcat(weekStart,{' To '}, weekEnd);
+                
+                xlswrite(outputFileName,weekstr,'Weekly Report',sprintf('A3:A%d',numWeek+2));
+                
+            end                
         end
     end
     

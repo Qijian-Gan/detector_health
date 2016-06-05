@@ -98,11 +98,16 @@ classdef data_filtering
                 % First fill in nan values
                 curStep=1;
                 for i=1:length(timeIndex)
-                    if(floor(data_in(curStep,5)/this.interval)*this.interval==timeIndex(i))
-                        tmp_data(i,:)=[timeIndex(i),data_in(curStep,6:10)];
-                        curStep=curStep+1;
+                    if(curStep>size(data_in,1)) % If there is missing data in the end
+                        tmp_data(i,:)=[timeIndex(i), zeros(1,5)];
                     else
-                        tmp_data(i,:)=[timeIndex(i), nan(1,5)];
+                        if(floor(data_in(curStep,5)/this.interval)*this.interval==timeIndex(i))
+                            % Need to use this function since some data points don't have the same time intervals
+                            tmp_data(i,:)=[timeIndex(i),data_in(curStep,6:10)];
+                            curStep=curStep+1;
+                        else % Missing data in between
+                            tmp_data(i,:)=[timeIndex(i), nan(1,5)];
+                        end
                     end
                 end
                 
