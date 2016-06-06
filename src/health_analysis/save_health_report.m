@@ -17,7 +17,7 @@ classdef save_health_report
             if nargin>1
                 this.folderLocation=folderLocation;
             else
-                this.folderLocation=findFolder.outputs;
+                this.folderLocation=findFolder.temp;
             end    
             
             this.health_report=save_health_report.struct2matrix_health_report(data);

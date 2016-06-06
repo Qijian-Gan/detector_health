@@ -16,7 +16,7 @@ classdef extract_health_report
             if nargin>1
                 this.folderLocation=folderLocation;
             else
-                this.folderLocation=findFolder.outputs;
+                this.folderLocation=findFolder.temp;
             end   
             
             this.StartDate=params.StartDate;
