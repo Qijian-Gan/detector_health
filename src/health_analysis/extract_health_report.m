@@ -36,11 +36,17 @@ classdef extract_health_report
             IntersectionIDs=[this.DetectorList.detectorConfig.IntersectionID]';
             SensorIDs=[this.DetectorList.detectorConfig.SensorID]';
             DetectorIDs=[];
+            DetourRoute=[];
             for i=1:numDetector
                 if(SensorIDs(i)<10)
                     DetectorIDs=[DetectorIDs;{strcat(num2str(IntersectionIDs(i)),'0',num2str(SensorIDs(i)))}];
                 else
                     DetectorIDs=[DetectorIDs;{strcat(num2str(IntersectionIDs(i)),num2str(SensorIDs(i)))}];
+                end
+                if(strcmp(this.DetectorList.detectorConfig(i).DetourRoute,'YES'))
+                    DetourRoute=[DetourRoute;1];
+                else
+                    DetourRoute=[DetourRoute;0];
                 end
             end
             
@@ -50,6 +56,7 @@ classdef extract_health_report
             
            performance=zeros(numDetector,numDay);
            avgPerformance=zeros(3,numDay);
+           performanceDetour=zeros(6,numDay);
            
            for i=1:numDetector
                id=DetectorIDs{i};
@@ -72,11 +79,18 @@ classdef extract_health_report
            avgPerformance(1,:)= mean(performance>0)*100;
            avgPerformance(2,:)= mean(performance==0)*100;
            avgPerformance(3,:)= mean(performance<0)*100;
+               
+           for k=0:1:1
+               idx=(DetourRoute==1-k);               
+               performanceDetour(3*(k)+1,:)= mean(performance(idx,:)>0)*100;
+               performanceDetour(3*(k)+2,:)= mean(performance(idx,:)==0)*100;
+               performanceDetour(3*(k)+3,:)= mean(performance(idx,:)<0)*100;
+           end
            
-           this.write_to_excel(DetectorIDs,StartDateID,EndDateID,performance,avgPerformance);
+           this.write_to_excel(DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour);
         end
 
-        function [this]=write_to_excel(this,DetectorIDs,StartDateID,EndDateID,performance,avgPerformance)
+        function [this]=write_to_excel(this,DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour)
             outputFolder=findFolder.reports;
             outputFileName=fullfile(outputFolder,sprintf('Health_Report_%s_TO_%s.xlsx',datestr(StartDateID),datestr(EndDateID)));
             
@@ -122,24 +136,30 @@ classdef extract_health_report
             if(numDay>=7) % Only provide weekly report when the number of days greater than or equal to one week
                 xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.DetectorList.city}],'Weekly Report');
                 
-                xlswrite(outputFileName,[{'Good'}, {'Bad'},{'No Data'}],'Weekly Report','B2:D2');
+                xlswrite(outputFileName,[{' '},{'Detour Routes'},{' '}, {' '},{'Not Detour Routes'},{' '},{' '}]...
+                    ,'Weekly Report','A2:G2');
+                
+                xlswrite(outputFileName,[{' '},{'Good'}, {'Bad'},{'No Data'},{'Good'}, {'Bad'},{'No Data'}]...
+                    ,'Weekly Report','A3:G3');
                 
                 numWeek=floor(numDay/7);
-                weeklyPerformance=zeros(numWeek,3);
-                for i=1:numWeek
-                    for j=1:3
-                        weeklyPerformance(i,j)=mean(avgPerformance(j,(i-1)*7+1:i*7));
-                    end                    
+                weeklyPerformance=zeros(numWeek,6);
+                for k=0:1:1                    
+                    for i=1:numWeek
+                        for j=1:3                            
+                            weeklyPerformance(i,3*k+j)=mean(performanceDetour(3*k+j,(i-1)*7+1:i*7));
+                        end
+                    end
                 end
                 
-                xlswrite(outputFileName,weeklyPerformance,'Weekly Report',sprintf('B3:D%d',numWeek+2));
+                xlswrite(outputFileName,weeklyPerformance,'Weekly Report',sprintf('B4:G%d',numWeek+3));
                 
                 weekStart=cellstr(datestr(StartDateID:7:StartDateID+7*(numWeek-1)));
                 weekEnd=cellstr(datestr(StartDateID+6:7:StartDateID+6+7*(numWeek-1)));
                 
                 weekstr= strcat(weekStart,{' To '}, weekEnd);
                 
-                xlswrite(outputFileName,weekstr,'Weekly Report',sprintf('A3:A%d',numWeek+2));
+                xlswrite(outputFileName,weekstr,'Weekly Report',sprintf('A4:A%d',numWeek+3));
                 
             end                
         end

@@ -53,6 +53,10 @@ classdef health_analysis
 
                 % Third check the number of significant break points
                 metrics.BreakPoints=health_analysis.check_number_of_break_points(tmpData,this.interval,this.threshold);
+                
+                % Fourth check whether the detector is reporting zeros
+                % during day time: from 7AM to 10PM
+                metrics.ZeroValues=health_analysis.check_zero_values(tmpData);
 
                 % Provide the rating: good/bad
                 metrics.Health=this.identification_good_or_bad(metrics);
@@ -82,6 +86,11 @@ classdef health_analysis
                 status=0;
             end
             
+            % Reporting zero values
+            if(metrics.ZeroValues==1)
+                status=0;
+            end
+            
             % Not a realiable metric currently            
 %             % Too many break points
 %             if(metrics.BreakPoints>=this.criteria_good.BreakPoints)
@@ -104,6 +113,7 @@ classdef health_analysis
                 'MissingRate',          nan,...                
                 'InconsistencyRate',    nan,...
                 'BreakPoints',          nan,...
+                'ZeroValues',           nan,...
                 'Health',               nan);
         end
         
@@ -117,6 +127,28 @@ classdef health_analysis
             % Occupancy or Speed or Volume =0, but others != 0
             idx=(sum((data(:,6:8)==0),2)>0 & sum((data(:,6:8)==0),2)<3);
             rate=sum(idx)/numInterval*100;
+        end
+        
+        function [rate]=check_zero_values(data)
+            
+            idx1=(data(:,5)>=7*3600);
+            idx2=(data(:,5)<22*3600);
+            idx=(idx1+idx2==2);
+            tmpData=data(idx,:);
+            
+            idx=(sum((tmpData(:,6:8)==0),2)>0 & sum((tmpData(:,6:8)==0),2)<3);
+            tmpData=tmpData(idx==0,:);
+            
+            sumFlow=sum(tmpData(:,6));
+            sumOcc=sum(tmpData(:,7));
+            sumSpeed=sum(tmpData(:,8));
+            
+            if(sumFlow==0 && sumOcc==0 && sumSpeed==0)
+                rate=1;
+            else
+                rate=0;
+            end          
+            
         end
         
         function [numPoints]=check_number_of_break_points(data,interval,threshold)

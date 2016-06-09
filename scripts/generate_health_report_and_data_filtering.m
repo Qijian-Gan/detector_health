@@ -35,6 +35,7 @@ health_report(1)=[];
 
 tmpList=[];
 for i=1:numFile
+    
     if(isempty(fileRead) || ~any(strcmp({fileList(i).name},fileRead))) % Empty or Not yet read
         
         % Parse data
@@ -59,7 +60,7 @@ for i=1:numFile
             'degree', nan));
         
         % Data filtering and smoothing
-        folderLocationFiltering=findFolder.outputs;
+        folderLocationFiltering=findFolder.temp;
         data_filtering(folderLocationFiltering,params_filtering,hc.data,hc.measures);
         
         tmpList=[tmpList;{fileList(i).name}];

@@ -57,7 +57,7 @@ classdef save_health_report
     methods(Static)
         function [dataOut]=struct2matrix_health_report(dataIn)
             dataOut=[[dataIn.DetectorID]', [dataIn.Year]', [dataIn.Month]', [dataIn.Day]',[dataIn.DateNum]'...
-                [dataIn.MissingRate]',[dataIn.InconsistencyRate]',[dataIn.BreakPoints]',[dataIn.Health]'];
+                [dataIn.MissingRate]',[dataIn.InconsistencyRate]',[dataIn.BreakPoints]',[dataIn.ZeroValues]',[dataIn.Health]'];
         end
     end
     

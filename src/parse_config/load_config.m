@@ -43,7 +43,9 @@ classdef load_config
                 'SensorID',             nan,...
                 'Movement',             nan,...
                 'Status',               nan,...
-                'DetourRoute',         nan),numDetector,1);
+                'DetourRoute',          nan,...
+                'AfterLeftTurnPocket',  nan,...
+                'AfterRightTurnPocket', nan),numDetector,1);
             
             for i=1:numDetector
                 tmpConfig(i).IntersectionID=num(i,1);
@@ -57,6 +59,8 @@ classdef load_config
                 tmpConfig(i).Movement=char(txt(i+1,8));  
                 tmpConfig(i).Status=char(txt(i+1,9)); 
                 tmpConfig(i).DetourRoute=char(txt(i+1,10)); 
+                tmpConfig(i).AfterLeftTurnPocket=char(txt(i+1,11)); 
+                tmpConfig(i).AfterRightTurnPocket=char(txt(i+1,12)); 
             end
         end
     end
