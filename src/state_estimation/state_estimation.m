@@ -2,6 +2,7 @@ classdef state_estimation < handle
     properties
         
         detectorConfig              % Detector-based configuration
+        
         approachConfig              % Approach-based configuration
         
         dataProvider                % Data provider
@@ -9,6 +10,7 @@ classdef state_estimation < handle
         default_params              % Default parameters
         params                      % Current parameters
         
+        default_proportions         % Default proportions of left-turn, through, and right-turn vehicles
     end
     
     methods ( Access = public )
@@ -21,14 +23,37 @@ classdef state_estimation < handle
             this.dataProvider=dataProvider;
             
             this.default_params=struct(...
-                'cycle',                    120,...
-                'green_left',               0.15,...
-                'green_through',            0.35,...
-                'green_right',              0.35,...
-                'detector_length',          12,...
-                'vehicle_length',           17,...
-                'speed_scales',             [30 15 5],...
-                'saturation_headway',       2.5);
+                'cycle',                             120,...
+                'green_left',                        0.15,...
+                'green_through',                     0.35,...
+                'green_right',                       0.35,...
+                'detector_length_left_turn',         50,...
+                'detector_length_advanced',          6,...
+                'detector_length',                   25,... % Through and right turns at the stop line
+                'vehicle_length',                    17,...
+                'speed_scales',                      [30 15 5],...
+                'saturation_headway',                2.0,...
+                'saturation_speed_left_and_right',   15,...
+                'saturation_speed_through',          25,...
+                'start_up_lost_time',                3);
+            
+            this.default_proportions=struct(...
+                'Left_Turn',                        [1, 0, 0],...
+                'Left_Turn_Queue',                  [0, 0, 0],...% currently tends not to use this value
+                'Right_Turn',                       [0, 0, 1],...
+                'Right_Turn_Queue',                 [0, 0, 0],...% currently tends not to use this value
+                'Advanced',                         [0.1, 0.85, 0.05],...
+                'Advanced_Left_Turn',               [1, 0, 0],...
+                'Advanced_Right_Turn',              [0, 0, 1],...
+                'Advanced_Through',                 [0, 1, 0],...
+                'Advanced_Through_and_Right',       [0, 0.85, 0.15],...
+                'Advanced_Left_and_Through',        [0.3, 0.7, 0],...
+                'Advanced_Left_and_Right',          [0.5, 0, 0.5],...
+                'All_Movements',                    [0.1, 0.85, 0.05],...
+                'Through',                          [0, 1, 0],...
+                'Left_and_Right',                   [0.5, 0, 0.5],...
+                'Left_and_Through',                 [0.3, 0.7, 0],...
+                'Through_and_Right',                [0, 0.85, 0.15]);
             
         end
         
@@ -346,9 +371,221 @@ classdef state_estimation < handle
             
         end
         
+        function [approachData]=traffic_assignment_by_approach(this, approach,params)
+              
+            % For each approach, we may need to update its parameter
+            % settings
+            if(nargin>=3) % Have new settings
+                this=this.update_param_setting(params);
+            else % Do not have param settings
+                this=this.update_param_setting;
+            end
+
+            % Check for left-turn queues
+            [left_turn_flow]=state_estimation.find_traffic_flow(this.default_proportion, approach,'Left');
+            [approach.decision_making.vehicle_assignment.left_turn_queue]=...
+                state_estimation.decide_vehicle_queue(left_turn_flow,this.params);
+            
+            % Check for right-turn queues
+            [right_turn_flow]=state_estimation.find_traffic_flow(this.default_proportion, approach,'Right');
+            [approach.decision_making.vehicle_assignment.right_turn_queue]=...
+                state_estimation.decide_vehicle_queue(right_turn_flow,this.params);
+            
+            % Check for through queues
+            [through_flow]=state_estimation.find_traffic_flow(this.default_proportion, approach,'Through');
+            [approach.decision_making.vehicle_assignment.through_queue]=...
+                state_estimation.decide_vehicle_queue(through_flow,this.params);
+            
+            
+        end
+        
     end
     
     methods(Static)
+        
+        function [vehQueue]=decide_vehicle_queue(flow,occ,params,movement)
+            switch movement
+                case 'Left'
+                    green_ratio=params.green_left;
+                    saturation_speed=params.saturation_speed_left_and_right;
+                    detector_length=params.detector_length_left_turn;
+                case 'Through'
+                    green_ratio=params.green_through;
+                    saturation_speed=params.saturation_speed_through;
+                    detector_length=params.detector_length;
+                case 'Right'
+                    green_ratio=params.green_right;
+                    saturation_speed=params.saturation_speed_left_and_right;
+                    detector_length=params.detector_length;
+            end
+
+            vehicle_length=params.vehicle_length;
+            saturation_headway=params.saturation_headway;
+            cycle=params.cycle;
+            start_up_lost_time=params.start_up_lost_time;
+            
+            discharging_time=(vehicle_length+detector_length)/saturation_speed*3600/5280;
+            total_discharging_time=flow*cycle/3600*discharging_time;
+            
+            platoon_width=saturation_headway*flow*cycle/3600;
+            
+            occupied_time=cycle*occ;
+            
+            if(occupied_time<total_discharging_time)
+                % If vehicle is travelling with a higher speed
+                vehQueue=0; 
+            else
+                time_in_red=max(0,occupied_time-total_discharging_time-start_up_lost_time);
+                
+                vehQueue=min(time_in_red/platoon_width,1)*flow*cycle/3600;
+            end
+
+        end
+        
+        function [flow]=find_traffic_flow(default_proportion,approach,movement)
+            switch movement
+                case 'Left'
+                    flow=0;
+                    if(~isempty(approach.exclusive_left_turn)||~isempty(approach.general_stopline_detectors))
+                        % Trust more on the stopline detectors
+                        exclusive_Left={'Left Turn','Left Turn Queue'};
+                        if(~isempty(approach.exclusive_left_turn))
+                            for i=1:length(exclusive_left)
+                                idx=ismember([approach.exclusive_left_turn.Movement],exclusive_left(i));
+                                left_turn_proportion=state_estimation.find_traffic_proportion...
+                                    (exclusive_left(i),default_proportion,movement);
+                                flow=flow+approach.exclusive_left_turn(idx).avg_data.avgFlow * left_turn_proportion;
+                            end
+                        end
+                        
+                        if(~isempty(approach.general_stopline_detectors))                            
+                            general_Left={'All Movements','Left and Right', 'Left and Through'};
+                            for i=1:length(general_Left)
+                                idx=ismember([approach.general_stopline_detectors.Movement],general_Left(i));
+                                left_turn_proportion=state_estimation.find_traffic_proportion...
+                                    (general_Left(i),default_proportion,movement);
+                                flow=flow+approach.general_stopline_detectors(idx).avg_data.avgFlow * left_turn_proportion;
+                            end
+                        end
+                    elseif(~isempty(approach.advanced_detectors))
+                        advanced_Left={'Advanced','Advanced Left Turn', 'Advanced Left and Through', 'Advanced Left and Right' };
+                        
+                        for i=1:length(advanced_Left)
+                            idx=ismember([approach.advanced_detectors.Movement],advanced_Left(i));
+                            left_turn_proportion=state_estimation.find_traffic_proportion...
+                                (advanced_Left(i),default_proportion,movement);
+                            flow=flow+approach.advanced_detectors(idx).avg_data.avgFlow * left_turn_proportion;
+                        end                        
+                    end            
+                case 'Right'
+                    flow=0;
+                    if(~isempty(approach.exclusive_right_turn)||~isempty(approach.general_stopline_detectors))
+                        % Trust more on the stopline detectors
+                        exclusive_Right={'Right Turn','Right Turn Queue'};
+                        if(~isempty(approach.exclusive_right_turn))
+                            for i=1:length(exclusive_Right)
+                                idx=ismember([approach.exclusive_right_turn.Movement],exclusive_Right(i));
+                                right_turn_proportion=state_estimation.find_traffic_proportion...
+                                    (exclusive_Right(i),default_proportion,movement);
+                                flow=flow+approach.exclusive_right_turn(idx).avg_data.avgFlow * right_turn_proportion;
+                            end
+                        end
+                        
+                        if(~isempty(approach.general_stopline_detectors))                            
+                            general_Right={'All Movements','Left and Right', 'Through and Right' };
+                            for i=1:length(general_Right)
+                                idx=ismember([approach.general_stopline_detectors.Movement],general_Right(i));
+                                right_turn_proportion=state_estimation.find_traffic_proportion...
+                                    (general_Right(i),default_proportion,movement);
+                                flow=flow+approach.general_stopline_detectors(idx).avg_data.avgFlow * right_turn_proportion;
+                            end
+                        end
+                    elseif(~isempty(approach.advanced_detectors))
+                        advanced_Right={'Advanced','Advanced Right Turn','Advanced Through and Right','Advanced Left and Right' };                        
+                        for i=1:length(advanced_Right)
+                            idx=ismember([approach.advanced_detectors.Movement],advanced_Right(i));
+                            right_turn_proportion=state_estimation.find_traffic_proportion...
+                                (advanced_Right(i),default_proportion,movement);
+                            flow=flow+approach.advanced_detectors(idx).avg_data.avgFlow * right_turn_proportion;
+                        end                        
+                    end           
+                    
+                case 'Through'
+                    flow=0;
+                    if(~isempty(approach.advanced_detectors))
+                        % Trust more on advanced detectors
+                        advanced_Through={'Advanced','Advanced Through','Advanced Through and Right','Advanced Left and Through'};
+                        for i=1:length(advanced_Through)
+                            idx=ismember([approach.advanced_detectors.Movement],advanced_Through(i));
+                            through_proportion=state_estimation.find_traffic_proportion...
+                                (advanced_Through(i),default_proportion,movement);
+                            flow=flow+approach.advanced_detectors(idx).avg_data.avgFlow * through_proportion;
+                        end
+                    elseif(~isempty(approach.general_stopline_detectors))
+                        general_Through={'All Movements','Through', 'Left and Through', 'Through and Right'};
+                        for i=1:length(general_Through)
+                            idx=ismember([approach.general_stopline_detectors.Movement],general_Through(i));
+                            through_proportion=state_estimation.find_traffic_proportion...
+                                (general_Through(i),default_proportion,movement);
+                            flow=flow+approach.general_stopline_detectors(idx).avg_data.avgFlow * through_proportion;
+                        end
+                    end
+                otherwise
+                    error('Wrong input of traffic movement!')
+            end
+            
+        end
+        
+        function [proportion]=find_traffic_proportion(detectorMovement,default_proportion,movement)
+            switch movement
+                case 'Left'
+                    idx=1;
+                case 'Through'
+                    idx=2;
+                case 'Right'
+                    idx=3;
+                otherwise
+                    error('Wrong input of traffic movement!')
+            end
+            
+            switch detectorMovement
+                case 'Left Turn'
+                    proportion=default_proportion.Left_Turn(idx);
+                case 'Left Turn Queue'
+                    proportion=default_proportion.Left_Turn_Queue(idx);
+                case 'Right Turn'
+                    proportion=default_proportion.Right_Turn(idx);
+                case 'Right Turn Queue'
+                    proportion=default_proportion.Right_Turn_Queue(idx);
+                case 'Advanced'
+                    proportion=default_proportion.Advanced(idx);
+                case 'Advanced Left Turn'
+                    proportion=default_proportion.Advanced_Left_Turn(idx);
+                case 'Advanced Right Turn'
+                    proportion=default_proportion.Advanced_Right_Turn(idx);
+                case 'Advanced Through'
+                    proportion=default_proportion.Advanced_Through(idx);
+                case 'Advanced Through and Right'
+                    proportion=default_proportion.Advanced_Through_and_Right(idx);
+                case 'Advanced Left and Through'
+                    proportion=default_proportion.Advanced_Left_and_Through(idx);
+                case 'Advanced Left and Right'
+                    proportion=default_proportion.Advanced_Left_and_Right(idx);
+                case 'All Movements'
+                    proportion=default_proportion.All_Movements(idx);
+                case 'Through'
+                    proportion=default_proportion.Through(idx);
+                case 'Left and Right'
+                    proportion=default_proportion.Left_and_Right(idx);
+                case 'Left and Through'
+                    proportion=default_proportion.Left_and_Through(idx);
+                case 'Through and Right'
+                    proportion=default_proportion.Through_and_Right(idx);
+                otherwise
+                    error('Corresponding movment not found!')
+            end
+            
+        end
         
         function [status_assessment]=traffic_state_assessment(approach)
 

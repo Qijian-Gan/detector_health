@@ -4,13 +4,8 @@ clc
 close all
 
 
-
-
-
-
 %% Load the detector config file
 config=load_config('arterial_system_detector_config.xlsx', 'Arcadia');
-
 
 %% Get the approach config file
 appConfig=aggregate_detector_to_approach_level(config);
