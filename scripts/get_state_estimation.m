@@ -19,7 +19,7 @@ queryMeasures=struct(...
     'timeOfDay', [18*3600 18*3600+900 ]);
 
 %% Run state estimation
-est=state_estimation(appConfig.detectorConfig,appConfig.approachConfig,ptr);
+est=state_estimation(appConfig.approachConfig,ptr,appConfig.detectorConfig);
 appStateEst=[];
 for i=1:size(appConfig.approachConfig,1)
     approach=appConfig.approachConfig(i);
