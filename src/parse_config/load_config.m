@@ -12,9 +12,11 @@ classdef load_config
         
         function [this]=load_config(name, city, location)
             % This function is to load the detector config file
+            
             if nargin>2
                 this.fileLocation=location;
             else
+                % Default location for the network configuration file
                 this.fileLocation=findFolder.config;
             end
             
@@ -43,11 +45,23 @@ classdef load_config
                 'SensorID',             nan,...
                 'Movement',             nan,...
                 'Status',               nan,...
-                'DetourRoute',          nan),numDetector,1);
+                'DetourRoute',          nan,...
+                'DetectorLength',       nan,...
+                'DistanceToStopbar',    nan,...
+                'NumberOfLanes',        nan,...
+                'LeftTurnPocket',       nan,...
+                'RightTurnPocket',      nan,...
+                'LinkLength',           nan),numDetector,1);
             
             for i=1:numDetector
                 tmpConfig(i).IntersectionID=num(i,1);
                 tmpConfig(i).SensorID=num(i,6);
+                tmpConfig(i).DetectorLength=num(i,10); 
+                tmpConfig(i).DistanceToStopbar=num(i,11); 
+                tmpConfig(i).NumberOfLanes=num(i,12); 
+                tmpConfig(i).LeftTurnPocket=num(i,13); 
+                tmpConfig(i).RightTurnPocket=num(i,14);
+                tmpConfig(i).LinkLength=num(i,15);
                 
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
@@ -57,6 +71,7 @@ classdef load_config
                 tmpConfig(i).Movement=char(txt(i+1,8));  
                 tmpConfig(i).Status=char(txt(i+1,9)); 
                 tmpConfig(i).DetourRoute=char(txt(i+1,10)); 
+                
             end
         end
     end

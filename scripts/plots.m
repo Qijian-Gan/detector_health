@@ -4,7 +4,7 @@ clc
 close all
 
 %% Load the detector config file
-load(fullfile(findFolder.outputs,'Clustered_data.mat'));
+load(fullfile(findFolder.outputs,'Clustered_data_Monday.mat'));
 
 ID=[{'608217'}; {'608214'};{'608202'}];
 [tf idx]=ismember(ID,{clustered_data.detectorID}');
@@ -20,7 +20,7 @@ xlabel('Time (hr)','FontSize',13)
 ylabel('Flow-rate (vph)','FontSize',13)
 hold on
 yyaxis right
-plot(time,occ/3000*100)
+plot(time,occ/3600*100)
 ylabel('Occupancy(%)','FontSize',13)
 
 title('Monday traffic profile: Advanced detector','FontSize',13)

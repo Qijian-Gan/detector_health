@@ -12,6 +12,8 @@ classdef DetectorDataProfile
     methods( Access = public )
 
         function [this] = DetectorDataProfile(time,s_volume,s_occupancy,s_speed, s_delay, s_stops)
+            % This function is to return the structual detector data
+            % profile
         
             % First initialize the profile 
             this.time = [];

@@ -6,18 +6,18 @@ close all
 %% Load the detector config file
 % load(fullfile(findFolder.temp,'Health_Report_307505.mat'));
 % load(fullfile(findFolder.temp,'Processed_data_307505.mat'));
-load(fullfile(findFolder.temp,'Health_Report_608213.mat'));
-load(fullfile(findFolder.temp,'Processed_data_608213.mat'));
+load(fullfile(findFolder.temp,'Health_Report_608217.mat'));
+load(fullfile(findFolder.temp,'Processed_data_608217.mat'));
 
 days=[processed_data.day]';
 [tf idx]=ismember(days,dataAll(:,5));
 dataAll=dataAll(idx,:);
 
-% % Set day of week
-% daynum=weekday(days);
-% idx=(daynum==2);
-% processed_data=processed_data(idx,:);
-% dataAll=dataAll(idx,:);
+% Set day of week
+daynum=weekday(days);
+idx=(daynum==2);
+processed_data=processed_data(idx,:);
+dataAll=dataAll(idx,:);
 
 % Select good days
 idx=(dataAll(:,end)==1);
@@ -45,4 +45,4 @@ xlabel('Occupancy (%)','FontSize',13)
 ylabel('Flow-rate (vph)','FontSize',13)
 title('Monday traffic profile: Advanced detector','FontSize',13)
 % title('Monday traffic profile: Left-turn detector','FontSize',13)
-% title('Monday traffic profile: Through stopline detector','FontSize',13)
+% title('Monday traffic profile: Through stopbar detector','FontSize',13)
