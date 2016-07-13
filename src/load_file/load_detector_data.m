@@ -8,7 +8,7 @@ classdef load_detector_data
     methods ( Access = public )
         
         function [this]=load_detector_data(folder)
-            % This function is to load the detector config file
+            % This function is to load the detector data file
             
             if nargin>0
                 this.folderLocation=folder;

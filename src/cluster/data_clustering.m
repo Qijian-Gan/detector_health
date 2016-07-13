@@ -6,8 +6,8 @@ classdef data_clustering
         
         listOfDetectors                 % List of detectors
         queryMeasures                   % Measures of the query:
-                                        % year, month, day of week, time of
-                                        % day, average/distribution
+                                        % year, month, day, day of week, time of
+                                        % day, average/median
     end
     
     methods ( Access = public )
@@ -34,6 +34,74 @@ classdef data_clustering
             end             
         end
          
+        function [data_out]=get_data_for_a_date(this,listOfDetectors, queryMeasures)
+            % This function is for data clustering
+            
+            % Get all parameters
+            if(isempty(listOfDetectors))
+                error('No detector list!')
+            end
+                 
+            % Get the number of detectors
+            numOfDetectors=length(listOfDetectors);
+            data_out=[];
+            % First read the data file
+            for i=1:numOfDetectors
+                detectorID=char(listOfDetectors(i));
+                
+                % Load data file and health report
+                dataFile=fullfile(this.inputFolderLocation,sprintf('Processed_data_%s.mat',detectorID));
+                healthReport=fullfile(this.inputFolderLocation,sprintf('Health_Report_%s.mat',detectorID));
+                if(exist(dataFile,'file')&& exist(healthReport,'file'))
+                    load(dataFile); % Inside: processed_data
+                    load(healthReport); % Inside: dataAll
+                    
+                    dateID=datenum(sprintf('%d-%d-%d',queryMeasures.year,queryMeasures.month,queryMeasures.day));
+                    tmp_data=processed_data(([processed_data.day]==dateID),:);
+                    tmp_health=dataAll(dataAll(:,5)==dateID,end);
+                    if(isempty(tmp_data)) % Data for that day not found
+                        data_out=[data_out;struct(...
+                            'detectorID', detectorID,...
+                            'data',DetectorDataProfile,...
+                            'status',{'No Data'})];
+                    else
+                        if(tmp_health==1) % Health status
+                            status={'Good Data'};
+                        else
+                            status={'Bad Data'};
+                        end
+                        
+                        if(queryMeasures.timeOfDay(end)>0) % Return time of day's data
+                            startTime=queryMeasures.timeOfDay(1);
+                            endTime=queryMeasures.timeOfDay(2);
+                            
+                            tmp_time=tmp_data.data.time;
+                            idx1=(tmp_time>=startTime);
+                            idx2=(tmp_time<endTime);
+                            idx=(idx1+idx2==2);
+                            
+                            tmp_data.data.time=tmp_data.data.time(idx);
+                            tmp_data.data.s_volume=tmp_data.data.s_volume(idx);
+                            tmp_data.data.s_occupancy=tmp_data.data.s_occupancy(idx);
+                            tmp_data.data.s_speed=tmp_data.data.s_speed(idx);
+                            tmp_data.data.s_delay=tmp_data.data.s_delay(idx);
+                            tmp_data.data.s_stops=tmp_data.data.s_stops(idx);
+                        end
+                        data_out=[data_out;struct(...
+                        'detectorID', detectorID,...
+                        'data',tmp_data.data,...
+                        'status',status)];
+                    end
+                else
+                    disp(sprintf('Missing either the data file or the health report for detector ID:%s\n',(detectorID)));  
+                    data_out=[data_out;struct(...
+                        'detectorID', detectorID,...
+                        'data',DetectorDataProfile,...
+                        'status',{'No Data'})];
+                end
+            end            
+        end
+        
         function [data_out]=clustering(this,listOfDetectors, queryMeasures)
             % This function is for data clustering
             

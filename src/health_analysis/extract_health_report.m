@@ -6,14 +6,16 @@ classdef extract_health_report
         DetectorList            % The List of detectors
         
         folderLocation          % Location of the output folder
+        
+        city                    % Name of the city
     end
     
     methods ( Access = public )
         
-        function [this]=extract_health_report(params,folderLocation)
+        function [this]=extract_health_report(params,city,folderLocation)
             % This function is to extract the health report for given
             % settings
-            if nargin>1
+            if nargin>2
                 this.folderLocation=folderLocation;
             else
                 this.folderLocation=findFolder.temp;
@@ -23,6 +25,8 @@ classdef extract_health_report
             this.EndDate=params.EndDate;
             this.DetectorList=params.DetectorList;
            
+            this.city=city;
+            
             this.extract_all;
         end
      
@@ -134,7 +138,7 @@ classdef extract_health_report
             %*****Writing daily performance ******
             numDay=size(avgPerformance,2);
             if(numDay>=7) % Only provide weekly report when the number of days greater than or equal to one week
-                xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.DetectorList.city}],'Weekly Report');
+                xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.city}],'Weekly Report');
                 
                 xlswrite(outputFileName,[{' '},{'Detour Routes'},{' '}, {' '},{'Not Detour Routes'},{' '},{' '}]...
                     ,'Weekly Report','A2:G2');

@@ -1,8 +1,6 @@
 classdef state_estimation
     properties
-        
-        detectorConfig              % Detector-based configuration
-        
+
         approachConfig              % Approach-based configuration
         
         dataProvider                % Data provider
@@ -15,7 +13,7 @@ classdef state_estimation
     
     methods ( Access = public )
         
-        function [this]=state_estimation(approachConfig,dataProvider,detectorConfig)
+        function [this]=state_estimation(approachConfig,dataProvider)
             % This function is to do the state estimation
             
             if(isempty(approachConfig)||isempty(dataProvider))
@@ -24,11 +22,7 @@ classdef state_estimation
             
             this.approachConfig=approachConfig;
             this.dataProvider=dataProvider;
-            
-            if(nargin==3)
-                this.detectorConfig=detectorConfig;
-            end
-            
+
             % Default values
             this.default_params=struct(...
                 'cycle',                                     120,...        % Cycle length
@@ -40,13 +34,14 @@ classdef state_estimation
                 'speed_freeflow_for_advanced_detector',      35,...         % Speed scale to determine free-flow speed
                 'flow_threshold_for_stopline_detector',      0.5,...        % Threshold to indicate low flow for stopbar detectors
                 'saturation_headway',                        2.0,...        % Saturation headway
-                'saturation_speed_left_and_right',           15,...         % Left-turn and right-turn speed at saturation
+                'saturation_speed_left',                     15,...         % Left-turn speed at saturation
+                'saturation_speed_right',                    15,...         % Right-turn speed at saturation
                 'saturation_speed_through',                  25,...         % Speed of through movements at saturation
                 'start_up_lost_time',                        3,...
                 'jam_spacing',                               24,...
                 'distance_advanced_detector',                200,...
-                'left_turn_pocket',                          200,...
-                'right_turn_pocket',                         150);           % Jam spacing
+                'left_turn_pocket',                          150,...
+                'right_turn_pocket',                         100);           
             
             % Default proportions for left-turn, through, and right-turn
             % movements for each type of detectors
@@ -55,14 +50,14 @@ classdef state_estimation
                 'Left_Turn_Queue',                  [0, 0, 0],...           % Currently tends not to use this value
                 'Right_Turn',                       [0, 0, 1],...           % Exclusive right turn: no through and left-turn movements
                 'Right_Turn_Queue',                 [0, 0, 0],...           % Currently tends not to use this value
-                'Advanced',                         [0.1, 0.85, 0.05],...   % Advanced detectors for all movements
+                'Advanced',                         [0.15, 0.8, 0.05],...   % Advanced detectors for all movements
                 'Advanced_Left_Turn',               [1, 0, 0],...           % Advanced detectors for left turns only
                 'Advanced_Right_Turn',              [0, 0, 1],...           % Advanced detectors for right turns only
                 'Advanced_Through',                 [0, 1, 0],...           % Advanced detectors for through movements only
                 'Advanced_Through_and_Right',       [0, 0.85, 0.15],...     % Advanced detectors for through and right-turn movements
                 'Advanced_Left_and_Through',        [0.3, 0.7, 0],...       % Advanced detectors for left-turn and through movements
                 'Advanced_Left_and_Right',          [0.5, 0, 0.5],...       % Advanced detectors for left-turn and right-turn movements
-                'All_Movements',                    [0.1, 0.85, 0.05],...   % Stop-line detectors for all movements
+                'All_Movements',                    [0.15, 0.8, 0.05],...   % Stop-line detectors for all movements
                 'Through',                          [0, 1, 0],...           % Stop-line detectors for through movements
                 'Left_and_Right',                   [0.5, 0, 0.5],...       % Stop-line detectors for left-turn and right-turn movements
                 'Left_and_Through',                 [0.3, 0.7, 0],...       % Stop-line detectors for left-turn and through movements
@@ -128,18 +123,21 @@ classdef state_estimation
             movementData_Out.avg_data=[];
             movementData_Out.status=[];
             for i=1: size(movementData_Out.IDs,1) % Get the number of detectors beloning to the same detector type
-                tmp_data=this.dataProvider.clustering(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
-                
-                if(~strcmp(tmp_data.status,'Good Data'))
-                    % Not good data, try historical averages
-                    tmp_data_hist=this.get_historical_average(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
-                    
-                    if(strcmp(tmp_data_hist.status,'Good Data'))
-                        % Only when it returns good historical averages
-                        tmp_data=tmp_data_hist;
+                if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) % For a particular date
+                    tmp_data=this.dataProvider.get_data_for_a_date(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
+                else % For historical data
+                    tmp_data=this.dataProvider.clustering(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
+
+                    if(~strcmp(tmp_data.status,'Good Data'))
+                        % Not good data, try historical averages
+                        tmp_data_hist=this.get_historical_average(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
+                        
+                        if(strcmp(tmp_data_hist.status,'Good Data'))
+                            % Only when it returns good historical averages
+                            tmp_data=tmp_data_hist;
+                        end
                     end
                 end
-                
                 % Save the status of the returned data: for each detector
                 movementData_Out.status=[movementData_Out.status;{tmp_data.status}];
                 movementData_Out.data=[movementData_Out.data;tmp_data.data];
@@ -166,20 +164,15 @@ classdef state_estimation
         
         %% ***************Functions to get traffic states and estimate vehicle queues*****************
         
-        function [approachData]=get_traffic_condition_by_approach(this,approach,params)
+        function [approachData]=get_traffic_condition_by_approach(this,approach)
             % This function is to get traffic conditions by approach:
             % exclusive left turns, exclusive right turns, stop-line
             % detectors, and advanced detectors. Rates are assigned
             % according to the relation between the current occupancy and the
             % occupancy scales
             
-            % For each approach, we may need to update its parameter
-            % settings. For example, signal settings
-            if(nargin>=3) % Have new settings
-                this=this.update_param_setting(params);
-            else % Do not have param settings
-                this=this.update_param_setting;
-            end
+            % Update parameter settings
+            this.params=this.update_signal_setting(approach.signal_properties);
             
             % Check exclusive left turn
             approach.decision_making.exclusive_left_turn.rates=[];
@@ -363,10 +356,12 @@ classdef state_estimation
             
             saturation_headway=this.params.saturation_headway;
             
-            saturation_speed_left_and_right=this.params.saturation_speed_left_and_right;
+            saturation_speed_left=this.params.saturation_speed_left;
+            saturation_speed_right=this.params.saturation_speed_right;
             saturation_speed_through=this.params.saturation_speed_through;
             
-            time_to_pass_left_and_right=(detector_length+this.params.vehicle_length)*3600/saturation_speed_left_and_right/5280;
+            time_to_pass_left=(detector_length+this.params.vehicle_length)*3600/saturation_speed_left/5280;
+            time_to_pass_right=(detector_length+this.params.vehicle_length)*3600/saturation_speed_right/5280;
             time_to_pass_through=(detector_length+this.params.vehicle_length)*3600/saturation_speed_through/5280;
             
             % Get proportions of vehicles for left-turn, through, and right-turn
@@ -381,7 +376,8 @@ classdef state_estimation
             numVehRight=numVeh*proportion_right;
             
             % Get the discharging time given the current flow-rate
-            dischargingTime=start_up_lost_time+(time_to_pass_left_and_right*(numVehLeft+numVehRight)+time_to_pass_through*numVehThrough)/numberOfLanes; % Divided by number of lanes
+            dischargingTime=start_up_lost_time+(time_to_pass_left*numVehLeft+...
+                time_to_pass_right*numVehRight+time_to_pass_through*numVehThrough)/numberOfLanes; % Divided by number of lanes
             occ_threshold=min(1,dischargingTime/this.params.cycle+(1-green_ratio)); % Get the threshold for occupancy
             
             capacity=numberOfLanes*(3600/saturation_headway)*green_ratio; % Need to time the number of lanes
@@ -399,69 +395,34 @@ classdef state_estimation
             speed=0; % For stopline detectors, no need to use speed information
         end
         
-        function [this]=update_param_setting(this,params)
-            % This function is to update parameter setttings
+        function [params]=update_signal_setting(this, signal_properties)
+            % This function is to update signal setttings
             
             % First, reset all values to default ones
-            this.params=this.default_params;
+            params=this.default_params;
             
-            % Check possible inputs
-            if (nargin>1)
-                % Signal settings: cycle length and green ratios for left-turn,
-                % through, and right-turn movements
-                if(isfiled(params,'cycle'))
-                    this.params.cycle=params.cycle;
+            % Update signal settings
+            if(~isempty(signal_properties))
+                if(~isnan(signal_properties.CycleLength))
+                    params.cycle=signal_properties.CycleLength;
                 end
-                if(isfiled(params,'green_left'))
-                    this.params.green_left=params.green_left;
+                if(~isnan(signal_properties.LeftTurnGreen))
+                    params.green_left=signal_properties.LeftTurnGreen/params.cycle;
                 end
-                if(isfiled(params,'green_through'))
-                    this.params.green_through=params.green_through;
+                if(~isnan(signal_properties.ThroughGreen))
+                    params.green_through=signal_properties.ThroughGreen/params.cycle;
                 end
-                if(isfiled(params,'green_right'))
-                    this.params.green_right=params.green_right;
+                if(~isnan(signal_properties.RightTurnGreen))
+                    params.green_right=signal_properties.RightTurnGreen/params.cycle;
                 end
-                if(isfiled(params,'start_up_lost_time'))
-                    this.params.start_up_lost_time=params.start_up_lost_time;
-                end
-                
-                % Check other practical settings: jam spacing, vehicle
-                % length, saturation headway, saturation speed for left-turn and right-turn
-                % movements, and saturation speed for through movements
-                if(isfiled(params,'jam_spacing'))
-                    this.params.jam_spacing=params.jam_spacing;
-                end
-                if(isfiled(params,'vehicle_length'))
-                    this.params.vehicle_length=params.vehicle_length;
-                end
-                if(isfiled(params,'saturation_headway'))
-                    this.params.saturation_headway=params.saturation_headway;
-                end
-                if(isfiled(params,'saturation_speed_left_and_right'))
-                    this.params.saturation_speed_left_and_right=params.saturation_speed_left_and_right;
-                end
-                if(isfiled(params,'saturation_speed_through'))
-                    this.params.saturation_speed_through=params.saturation_speed_through;
-                end
-                
-                
-                if(isfiled(params,'speed_threshold_for_advanced_detector'))
-                    this.params.speed_threshold_for_advanced_detector=params.speed_threshold_for_advanced_detector;
-                end
-                if(isfiled(params,'speed_freeflow_for_advanced_detector'))
-                    this.params.speed_freeflow_for_advanced_detector=params.speed_freeflow_for_advanced_detector;
-                end             
-                if(isfiled(params,'flow_threshold_for_stopline_detector'))
-                    this.params.flow_threshold_for_stopline_detector=params.flow_threshold_for_stopline_detector;
-                end
-                if(isfiled(params,'distance_advanced_detector'))
-                    this.params.distance_advanced_detector=params.distance_advanced_detector;
-                end
-                if(isfiled(params,'left_turn_pocket'))
-                    this.params.left_turn_pocket=params.left_turn_pocket;
-                end
-                if(isfiled(params,'right_turn_pocket'))
-                    this.params.right_turn_pocket=params.right_turn_pocket;
+                if(~isnan(signal_properties.LeftTurnSetting))
+                    if(strcmp(signal_properties.LeftTurnSetting,'Permitted'))
+                        params.saturation_speed_left=5;                        
+                    elseif(strcmp(signal_properties.LeftTurnSetting,'Protected_Permitted'))
+                        params.saturation_speed_left=10;
+                    else
+                        params.saturation_speed_left=15;
+                    end
                 end
             end
             
@@ -762,15 +723,15 @@ classdef state_estimation
             % For left turns
             [queue_threshold.left]=state_estimation.get_queue_threshold_for_movement(num_exclusive_left_lane,movement_lane_proportion_advanced,...
                 movement_lane_proportion_general,num_jam_vehicle_per_lane,seperation_left,...
-                distance_advanced_detector,approach.link_length,'Left');
+                distance_advanced_detector,approach.link_properties.LinkLength,'Left');
             % For right-turn movements
             [queue_threshold.right]=state_estimation.get_queue_threshold_for_movement(num_exclusive_right_lane,movement_lane_proportion_advanced,...
                 movement_lane_proportion_general,num_jam_vehicle_per_lane,seperation_right,...
-                distance_advanced_detector,approach.link_length,'Right');
+                distance_advanced_detector,approach.link_properties.LinkLength,'Right');
             % For through movements
             [queue_threshold.through]=state_estimation.get_queue_threshold_for_movement(0,movement_lane_proportion_advanced,...
                 movement_lane_proportion_general,num_jam_vehicle_per_lane,max(seperation_left,seperation_right),...
-                distance_advanced_detector,approach.link_length,'Through');
+                distance_advanced_detector,approach.link_properties.LinkLength,'Through');
             
             
         end

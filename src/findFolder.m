@@ -16,7 +16,15 @@ classdef findFolder
         end
         
         function [x] = data()
-            x = fullfile(findFolder.root,'data');
+            x = fullfile(findFolder.root,'data\detector');
+        end
+        
+        function [x] = midlink_count()
+            x = fullfile(findFolder.root,'data\midlink_count');
+        end
+        
+        function [x] = turning_count()
+            x = fullfile(findFolder.root,'data\turning_count');
         end
         
         function [x] = config()

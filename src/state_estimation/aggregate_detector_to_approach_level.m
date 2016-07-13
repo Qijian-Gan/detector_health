@@ -3,9 +3,11 @@ classdef aggregate_detector_to_approach_level
         
         fileLocation                    % Location of the configuration file
         fileName                        % File name
-        city                            % Name of the city
         
-        detectorConfig                  % Detector-based configuration file   
+        detectorConfig                  % Detector-based configuration file  
+        linkConfig                      % Link config
+        signalConfig                    % Signal config
+        
         approachConfig                  % Approach-based configuration file
         
         
@@ -20,36 +22,32 @@ classdef aggregate_detector_to_approach_level
             if nargin==0
                 error('No inputs!')
             end 
-            
-            this.city=config.city;
+
             this.fileLocation=config.fileLocation;
-            this.fileName=config.fileName;
-            
+            this.fileName=config.fileName;            
             this.detectorConfig=config.detectorConfig; 
-            this.approachConfig=aggregate_detector_to_approach_level.detector_to_approach(this.detectorConfig);
+            this.linkConfig=config.linkConfig;
+            this.signalConfig=config.signalConfig;
             
         end
                 
-    end
-    
-    methods (Static)
-        
-        function [approachConfig]=detector_to_approach(detectorConfig)
+         
+        function [approachConfig]=detector_to_approach(this)
             % From detector level to approach level (left-turn, through, and right)
-            
+             
             % First, get the number of approaches
             % Get unique pairs of [intersection, approach, direction]
             [int_app_dir_pair,numPair]=aggregate_detector_to_approach_level.get_unique_int_app_dir_pair(...
-                {detectorConfig.IntersectionName}',{detectorConfig.RoadName}',{detectorConfig.Direction}');
+                {this.detectorConfig.IntersectionName}',{this.detectorConfig.RoadName}',{this.detectorConfig.Direction}');
             
             approachConfig=[];
             % Second, start to get the detector information for each
             % approach
             for i=1:numPair % Loop for each pair
                 % Get the rows with the same [int, app, dir]
-                idx=(sum(ismember([{detectorConfig.IntersectionName}',{detectorConfig.RoadName}',{detectorConfig.Direction}'],...
+                idx=(sum(ismember([{this.detectorConfig.IntersectionName}',{this.detectorConfig.RoadName}',{this.detectorConfig.Direction}'],...
                     int_app_dir_pair(i,:),'rows'),2)==3);
-                tmp_data=detectorConfig(idx,:);
+                tmp_data=this.detectorConfig(idx,:);
                 
                 % Find different categories of detectors: exclusive left,
                 % exclusive right, general stopline, and advanded detectors
@@ -57,6 +55,35 @@ classdef aggregate_detector_to_approach_level
                 exclusive_right_turn=aggregate_detector_to_approach_level.find_detectors(tmp_data,'Right');
                 advanced_detectors=aggregate_detector_to_approach_level.find_detectors(tmp_data,'Advanced');
                 general_stopline_detectors=aggregate_detector_to_approach_level.find_detectors(tmp_data,'General');
+                
+                % Find link properties
+                clear idx;
+                idx=(sum(ismember([{this.linkConfig.IntersectionName}',{this.linkConfig.RoadName}',{this.linkConfig.Direction}'],...
+                    int_app_dir_pair(i,:),'rows'),2)==3);
+                if(sum(idx))
+                    link_properties=struct(...
+                        'LinkLength',            this.linkConfig(idx).LinkLength,...
+                        'NumberOfLanes',         this.linkConfig(idx).NumberOfLanes,...
+                        'Capacity',              this.linkConfig(idx).Capacity,...
+                        'MaxSpeed',              this.linkConfig(idx).MaxSpeed);
+                else
+                    link_properties=[];
+                end
+                
+                % Find signal settings
+                clear idx;
+                idx=(sum(ismember([{this.signalConfig.IntersectionName}',{this.signalConfig.RoadName}',{this.signalConfig.Direction}'],...
+                    int_app_dir_pair(i,:),'rows'),2)==3);
+                if(sum(idx))
+                    signal_properties=struct(...
+                        'CycleLength',              this.signalConfig(idx).CycleLength,...
+                        'LeftTurnGreen',            this.signalConfig(idx).LeftTurnGreen,...
+                        'ThroughGreen',             this.signalConfig(idx).ThroughGreen,...
+                        'RightTurnGreen',           this.signalConfig(idx).RightTurnGreen,...
+                        'LeftTurnSetting',          this.signalConfig(idx).LeftTurnSetting);
+                else
+                    signal_properties=[];
+                end
                 
                 approachConfig=[approachConfig;struct(...
                     'intersection_name',            int_app_dir_pair(i,1),...
@@ -66,10 +93,14 @@ classdef aggregate_detector_to_approach_level
                     'exclusive_right_turn',         exclusive_right_turn,...
                     'advanced_detectors',           advanced_detectors,...
                     'general_stopline_detectors',   general_stopline_detectors,...
-                    'link_length', tmp_data(1).LinkLength)];
+                    'link_properties',              link_properties,...
+                    'signal_properties',            signal_properties)];
             end          
         end
         
+    end
+    
+    methods(Static)
         function [detectorList]=find_detectors(data,movement)
             % This function is to find the detectors belonging to the same
             % type: exclusive left, exclusive right, general stopline, and

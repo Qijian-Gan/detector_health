@@ -16,8 +16,8 @@ else
 end
 
 % Load the detector data and get the list of files that is needed to be updated
-dp=load_detector_data('D:\I210_Arcadia\2016');
-% dp=load_detector_data; % With empty input: Default folder ('data')
+% dp=load_detector_data('D:\I210_Arcadia\2016');
+dp=load_detector_data; % With empty input: Default folder ('data')
 fileList=dp.obtain_file_list(dp.folderLocation); % Get the list of detector files
 
 %% Run the health analysis

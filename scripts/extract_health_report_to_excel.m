@@ -5,7 +5,8 @@ close all
 
 
 %% Load the detector config file
-config=load_config('arterial_system_detector_config.xlsx', 'Arcadia');
+config=load_config('Arcadia_detector_config.xlsx');
+config.detectorConfig=config.detector_property('Detector_Properties');
 
 
 %% Extract health analysis report
@@ -17,7 +18,7 @@ params=struct(...
     'EndDate',        struct(...
         'Year',     2016,...
         'Month',    6,...
-        'Day',      11),...
+        'Day',      25),...
     'DetectorList', config);
 
-extract_health_report(params);
+extract_health_report(params,'Arcadia');
