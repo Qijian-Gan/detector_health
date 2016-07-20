@@ -1,4 +1,4 @@
-classdef data_clustering 
+classdef sensor_count_provider 
     properties
         
         inputFolderLocation             % Folder that stores the processed data files
@@ -12,8 +12,8 @@ classdef data_clustering
     
     methods ( Access = public )
 
-        function [this]=data_clustering(inputFolderLocation, outputFolderLocation,listOfDetectors, queryMeasures)
-            % This function is to do the data clustering
+        function [this]=sensor_count_provider(inputFolderLocation, outputFolderLocation,listOfDetectors, queryMeasures)
+            % This function is to obtain the sensor data
             
             % Obtain inputs
             if nargin==0 % Default input and output folders
@@ -35,7 +35,7 @@ classdef data_clustering
         end
          
         function [data_out]=get_data_for_a_date(this,listOfDetectors, queryMeasures)
-            % This function is for data clustering
+            % This function is to get data for a particular date
             
             % Get all parameters
             if(isempty(listOfDetectors))
@@ -123,7 +123,7 @@ classdef data_clustering
                 if(exist(dataFile,'file')&& exist(healthReport,'file'))
                     load(dataFile); % Inside: processed_data
                     load(healthReport); % Inside: dataAll
-                    [tmp_data,status]=data_clustering.cluster_data_by_query_measures(processed_data,dataAll,queryMeasures);
+                    [tmp_data,status]=sensor_count_provider.cluster_data_by_query_measures(processed_data,dataAll,queryMeasures);
                     data_out=[data_out;struct(...
                         'detectorID', detectorID,...
                         'data',tmp_data,...
@@ -190,14 +190,21 @@ classdef data_clustering
                 clear idx
             end
             
-            % By day of week?
+            % By day of week? Weekday? Weekend?
             if (dayOfWeek>0)
-                idx=(weekday(report(:,5))==dayOfWeek);
+                if(dayOfWeek==8) % Weekday
+                    idx=(weekday(report(:,5))==1 | weekday(report(:,5))==7);
+                    idx=(idx==0);
+                elseif(dayOfWeek==9) % Weekend
+                    idx=(weekday(report(:,5))==1 | weekday(report(:,5))==7);
+                else % day of week
+                    idx=(weekday(report(:,5))==dayOfWeek);
+                end
                 dataFile=dataFile(idx,:);
                 report=report(idx,:);
                 clear idx
             end
-
+            
             % Using median values
             if(queryMeasures.median)
                 useMedian=1;
@@ -215,7 +222,7 @@ classdef data_clustering
                 if (sum(idx)==0) % No good data
                     data=vertcat(dataFile(1:end).data);
                     
-                    data_out=data_clustering.get_time_of_day_data(data,timeOfDay,useMedian);                    
+                    data_out=sensor_count_provider.get_time_of_day_data(data,timeOfDay,useMedian);                    
                     status={'Bad Data'};
                 else % Have good data
                     dataFile=dataFile(idx,:);
@@ -223,7 +230,7 @@ classdef data_clustering
                     
                     data=vertcat(dataFile(1:end).data);
                     
-                    data_out=data_clustering.get_time_of_day_data(data,timeOfDay,useMedian);                    
+                    data_out=sensor_count_provider.get_time_of_day_data(data,timeOfDay,useMedian);                    
                     status={'Good Data'};
                 end
             end
@@ -272,7 +279,7 @@ classdef data_clustering
                                 end
                             end
                             idx1=(volume(:,i)==first_val);
-                            idx2=(volume(:,i)==second_val);
+                            idx2=(volume(:,i)==second_val);                            
                             idx=(idx1+idx2>0);
                         end
                                     
@@ -296,9 +303,10 @@ classdef data_clustering
                 startTime=timeOfDay(1);
                 endTime=timeOfDay(2);
 
-                idx1=(tmp_time>=startTime);
-                idx2=(tmp_time<endTime);
-                idx=(idx1+idx2==2);
+                idx=(tmp_time>=startTime & tmp_time<endTime);
+%                 idx1=(tmp_time>=startTime);
+%                 idx2=(tmp_time<endTime);
+%                 idx=(idx1+idx2==2);
                 
                 time=tmp_time(idx);
                 s_volume=tmp_volume(idx);

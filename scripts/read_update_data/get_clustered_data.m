@@ -4,23 +4,25 @@ clc
 close all
 
 %% Load the detector config file
-config=load_config('arterial_system_detector_config.xlsx', 'Arcadia');
-
+config=load_config('Arcadia_detector_config.xlsx');
+config.detectorConfig=config.detector_property('Detector_Properties');
 
 
 %% Extract the clustered data for given settings
 
 day={'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'};
-ptr=data_clustering; % Create the object with default file locations
+ptr=sensor_count_provider; % Create the object with default file locations
 
 for d=1:7
+    
     queryMeasures=struct(...
         'year',     nan,...
         'month',    nan,...
+        'day',      nan,...
         'dayOfWeek',d,...
-        'timeOfDay', 0,...
-        'median', true);
-    
+        'median', 1,...
+        'timeOfDay', 0);
+
     numDetector=size(config.detectorConfig,1);
     
     clustered_data=[];

@@ -7,6 +7,7 @@ classdef aggregate_detector_to_approach_level
         detectorConfig                  % Detector-based configuration file  
         linkConfig                      % Link config
         signalConfig                    % Signal config
+        midlinkConfig                   % Midlink config
         
         approachConfig                  % Approach-based configuration file
         
@@ -28,6 +29,7 @@ classdef aggregate_detector_to_approach_level
             this.detectorConfig=config.detectorConfig; 
             this.linkConfig=config.linkConfig;
             this.signalConfig=config.signalConfig;
+            this.midlinkConfig=config.midlinkConfig;
             
         end
                 
@@ -85,6 +87,18 @@ classdef aggregate_detector_to_approach_level
                     signal_properties=[];
                 end
                 
+                % Find midlink properties
+                clear idx;
+                idx=(sum(ismember([{this.midlinkConfig.IntersectionName}',{this.midlinkConfig.RoadName}',{this.midlinkConfig.Direction}'],...
+                    int_app_dir_pair(i,:),'rows'),2)==3);
+                if(sum(idx))
+                    midlink_properties=struct(...
+                        'Location',              this.midlinkConfig(idx).Location,...
+                        'Approach',              this.midlinkConfig(idx).Approach);
+                else
+                    midlink_properties=[];
+                end
+                
                 approachConfig=[approachConfig;struct(...
                     'intersection_name',            int_app_dir_pair(i,1),...
                     'road_name',                    int_app_dir_pair(i,2),...
@@ -94,7 +108,9 @@ classdef aggregate_detector_to_approach_level
                     'advanced_detectors',           advanced_detectors,...
                     'general_stopline_detectors',   general_stopline_detectors,...
                     'link_properties',              link_properties,...
-                    'signal_properties',            signal_properties)];
+                    'signal_properties',            signal_properties,...
+                    'midlink_properties',           midlink_properties,...
+                    'turning_count_properties',     [])];
             end          
         end
         

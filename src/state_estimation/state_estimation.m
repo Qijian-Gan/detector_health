@@ -3,7 +3,9 @@ classdef state_estimation
 
         approachConfig              % Approach-based configuration
         
-        dataProvider                % Data provider
+        dataProvider_sensor         % Data provider: sensor
+        dataProvider_midlink        % Data provider: sensor
+        dataProvider_turningCount   % Data provider: sensor
         
         default_params              % Default parameters
         params                      % Current parameters
@@ -13,15 +15,22 @@ classdef state_estimation
     
     methods ( Access = public )
         
-        function [this]=state_estimation(approachConfig,dataProvider)
+        function [this]=state_estimation(approachConfig,dataProvider_sensor, dataProvider_midlink, dataProvider_turningCount)
             % This function is to do the state estimation
             
-            if(isempty(approachConfig)||isempty(dataProvider))
+            if(isempty(approachConfig)||isempty(dataProvider_sensor))
                 error('Wrong inputs');
             end
             
             this.approachConfig=approachConfig;
-            this.dataProvider=dataProvider;
+            this.dataProvider_sensor=dataProvider_sensor;
+            
+            if(nargin>2)
+                this.dataProvider_midlink=dataProvider_midlink;
+            end
+            if(nargin>3)
+                this.dataProvider_turningCount=dataProvider_turningCount;
+            end
 
             % Default values
             this.default_params=struct(...
@@ -64,9 +73,135 @@ classdef state_estimation
                 'Through_and_Right',                [0, 0.85, 0.15]);       % Stop-line detectors for through and right-turn movements
         end
         
-        %% ***************Functions to get data*****************
+        %% Functions to get/update params and proportions
+                
+        function [approach_out]=get_default_proportions(this,approach_in)
+            
+            approach_out=approach_in;
+            approach_out.proportions=this.default_proportions;
+            
+        end        
         
-        function [approachData]=get_data_for_approach(this,approach,queryMeasures)
+        function [approach_out]=update_vehicle_proportions(this,approach_in,queryMeasures)
+            
+            % Get default proportions
+            [approach_in]=this.get_default_proportions(approach_in);  
+            % Get turning count data
+            [approach_in]=this.get_turning_count_for_approach(approach_in,queryMeasures);    
+            
+            
+            
+            % Get turning proportions
+            if(~isempty(approach_in.turning_count_properties.data)) % If not empty
+                data=approach_in.turning_count_properties.data;
+                
+                time=data.time;
+                
+                totalVolume=sum(data.volume,2);
+                proportionLeft=data.volume(:,1)./totalVolume;
+                proportionThrough=data.volume(:,2)./totalVolume;
+                proportionRight=data.volume(:,3)./totalVolume;
+                    
+                if(isnan(queryMeasures.timeOfDay)) % No specific time of day
+                    avgProportionLeft=mean(proportionLeft);
+                    avgProportionThrough=mean(proportionThrough);
+                    avgProportionRight=mean(proportionRight);
+                else % Given a specific time
+                    startTime=queryMeasures.timeOfDay(1);
+                    endTime=queryMeasures.timeOfDay(end);
+                    
+                    idx1=(time>=startTime);
+                    idx2=(time<endTime);
+                    idx=(idx1+idx2==2);
+                    
+                    if(sum(idx)==0) % Do not have data for that time period
+                        avgProportionLeft=mean(proportionLeft);
+                        avgProportionThrough=mean(proportionThrough);
+                        avgProportionRight=mean(proportionRight);
+                    else % Have data
+                        avgProportionLeft=mean(proportionLeft(idx));
+                        avgProportionThrough=mean(proportionThrough(idx));
+                        avgProportionRight=mean(proportionRight(idx));
+                    end
+                end  
+                
+                % Update the proportions in the default settings
+                % All movements
+                approach_in.proportions.Advanced=[avgProportionLeft,avgProportionThrough,avgProportionRight];
+                approach_in.proportions.All_Movements=approach_in.proportions.Advanced;
+                
+                % Through and Right
+                approach_in.proportions.Advanced_Through_and_Right=...
+                    [0,avgProportionThrough/(avgProportionThrough+avgProportionRight),...
+                    avgProportionRight/(avgProportionThrough+avgProportionRight)];
+                approach_in.proportions.Through_and_Right=approach_in.proportions.Advanced_Through_and_Right;
+                
+                % Left and Through
+                approach_in.proportions.Advanced_Left_and_Through=...
+                    [avgProportionLeft/(avgProportionThrough+avgProportionLeft),...
+                    avgProportionThrough/(avgProportionThrough+avgProportionLeft),0];
+                approach_in.proportions.Left_and_Through=approach_in.proportions.Advanced_Left_and_Through;
+                
+                % Left and Right
+                approach_in.proportions.Advanced_Left_and_Right=...
+                    [avgProportionLeft/(avgProportionRight+avgProportionLeft),0,...
+                    avgProportionRight/(avgProportionRight+avgProportionLeft)];
+                approach_in.proportions.Left_and_Right=approach_in.proportions.Advanced_Left_and_Right;
+                
+            end
+            
+            approach_out=approach_in;
+            
+        end
+        
+        %% ***************Functions to get data*****************
+        function [approach_out]=get_turning_count_for_approach(this,approach_in, queryMeasures)
+            
+            approach_out=approach_in;
+            fileName=sprintf('TP_%s_%s_%s.mat',approach_in.intersection_name,...
+                strrep(approach_in.road_name,' ', '_'),approach_in.direction);
+            if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) % For a particular date
+                data_out=this.dataProvider_turningCount.get_data_for_a_date(fileName,queryMeasures);
+            else % For historical data  
+                queryMeasures.timeOfDay=nan;
+                [data_out]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
+                
+                if(isempty(data_out))
+                    % Do not specify year, month, and day of week
+                    queryMeasures.year=nan;
+                    queryMeasures.month=nan;
+                    queryMeasures.dayOfWeek=nan;
+                    [data_out]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
+                end
+            end
+            
+            approach_out.turning_count_properties.data=data_out;
+        end
+        
+        function [approach_out]=get_midlink_data_for_approach(this,approach_in, queryMeasures)
+            
+            approach_out=approach_in;
+            fileName=sprintf('Midlink_%s_%s.mat',approach_in.midlink_properties.Location,...
+                approach_in.midlink_properties.Approach);
+            if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) % For a particular date
+                data_out=this.dataProvider_midlink.get_data_for_a_date(fileName,queryMeasures);
+            else % For historical data  
+                queryMeasures.timeOfDay=nan;
+                [data_out]=this.dataProvider_midlink.clustering(fileName, queryMeasures);
+                
+                if(isempty(data_out))
+                    % Do not specify year, month, and day of week
+                    queryMeasures.year=nan;
+                    queryMeasures.month=nan;
+                    queryMeasures.dayOfWeek=nan;
+                    [data_out]=this.dataProvider_midlink.clustering(fileName, queryMeasures);
+                end
+            end
+            
+            approach_out.midlink_properties.data=data_out;
+        end
+        
+        function [approachData]=get_sensor_data_for_approach(this,approach,queryMeasures)
             % This function is to get data for a given approach with specific query measures
             
             % First, get the flow and occ data for exclusive left-turn detectors if exist
@@ -124,9 +259,9 @@ classdef state_estimation
             movementData_Out.status=[];
             for i=1: size(movementData_Out.IDs,1) % Get the number of detectors beloning to the same detector type
                 if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) % For a particular date
-                    tmp_data=this.dataProvider.get_data_for_a_date(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
+                    tmp_data=this.dataProvider_sensor.get_data_for_a_date(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
                 else % For historical data
-                    tmp_data=this.dataProvider.clustering(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
+                    tmp_data=this.dataProvider_sensor.clustering(cellstr(movementData_Out.IDs(i,:)), queryMeasures);
 
                     if(~strcmp(tmp_data.status,'Good Data'))
                         % Not good data, try historical averages
@@ -158,9 +293,8 @@ classdef state_estimation
             queryMeasures.dayOfWeek=nan;
             
             % Get the clustered data
-            data=this.dataProvider.clustering(id, queryMeasures);
+            data=this.dataProvider_sensor.clustering(id, queryMeasures);
         end
-        
         
         %% ***************Functions to get traffic states and estimate vehicle queues*****************
         
