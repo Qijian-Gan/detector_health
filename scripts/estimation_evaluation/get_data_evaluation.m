@@ -25,10 +25,25 @@ ptr_turningCount=turning_count_provider;
 evl=data_evaluation(appConfig.approachConfig,ptr_sensor,ptr_midlink,ptr_turningCount);
 appDataEvl=[];
 for i=5:size(appConfig.approachConfig,1)
+    % For approach
     [approach]=evl.get_turning_count_for_approach(appConfig.approachConfig(i));
     [approach]=evl.get_midlink_data_for_approach(approach);
     [approach]=evl.get_stopbar_data_for_approach(approach);
     [approach]=evl.get_advanced_data_for_approach(approach);
+    [approach]=evl.diagnose_approach_flow(approach,900);
+    
+    % For individual movement
+    [approach]=evl.get_turning_count_for_movement(approach,'Left Turn');
+    [approach]=evl.get_turning_count_for_movement(approach,'Through');
+    [approach]=evl.get_turning_count_for_movement(approach,'Right Turn');    
+    [approach]=evl.get_stopbar_data_for_movement(approach,'Left Turn');
+    [approach]=evl.get_stopbar_data_for_movement(approach,'Through');
+    [approach]=evl.get_stopbar_data_for_movement(approach,'Right Turn');
+    
+    [approach]=evl.diagnose_movement_flow(approach, 'Left Turn', 900);
+    [approach]=evl.diagnose_movement_flow(approach, 'Through', 900);
+    [approach]=evl.diagnose_movement_flow(approach, 'Right Turn', 900);
+    
     appDataEvl=[appDataEvl;approach];
 end
 

@@ -27,6 +27,10 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\turning_count');
         end
         
+        function [x] = bluetooth_travel_time()
+            x = fullfile(findFolder.root,'data\bluetooth');
+        end
+        
         function [x] = config()
             x = fullfile(findFolder.root,'config');
         end
