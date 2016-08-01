@@ -31,6 +31,7 @@ for i=5:size(appConfig.approachConfig,1)
     [approach]=evl.get_stopbar_data_for_approach(approach);
     [approach]=evl.get_advanced_data_for_approach(approach);
     [approach]=evl.diagnose_approach_flow(approach,900);
+    [approach]=evl.get_rescaled_approach_flow(approach);
     
     % For individual movement
     [approach]=evl.get_turning_count_for_movement(approach,'Left Turn');
@@ -43,6 +44,9 @@ for i=5:size(appConfig.approachConfig,1)
     [approach]=evl.diagnose_movement_flow(approach, 'Left Turn', 900);
     [approach]=evl.diagnose_movement_flow(approach, 'Through', 900);
     [approach]=evl.diagnose_movement_flow(approach, 'Right Turn', 900);
+    [approach]=evl.get_scaled_movement_flow(approach,'Left Turn');
+    [approach]=evl.get_scaled_movement_flow(approach,'Through');
+    [approach]=evl.get_scaled_movement_flow(approach,'Right Turn');
     
     appDataEvl=[appDataEvl;approach];
 end
