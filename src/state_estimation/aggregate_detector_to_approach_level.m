@@ -17,13 +17,14 @@ classdef aggregate_detector_to_approach_level
     methods ( Access = public )
         
         function [this]=aggregate_detector_to_approach_level(config)
-            % This function is to aggregate detector to approach level
+            %% This function is to aggregate detector to approach level
             
             % Obtain inputs
             if nargin==0
                 error('No inputs!')
             end 
 
+            % Copy all information
             this.fileLocation=config.fileLocation;
             this.fileName=config.fileName;            
             this.detectorConfig=config.detectorConfig; 
@@ -32,15 +33,15 @@ classdef aggregate_detector_to_approach_level
             this.midlinkConfig=config.midlinkConfig;
             
         end
-                
-         
+                  
         function [approachConfig]=detector_to_approach(this)
-            % From detector level to approach level (left-turn, through, and right)
+            % This function is: from detector level to approach level (left-turn, through, and right)
              
             % First, get the number of approaches
             % Get unique pairs of [intersection, approach, direction]
             [int_app_dir_pair,numPair]=aggregate_detector_to_approach_level.get_unique_int_app_dir_pair(...
-                {this.detectorConfig.IntersectionName}',{this.detectorConfig.RoadName}',{this.detectorConfig.Direction}');
+                {this.detectorConfig.IntersectionName}',{this.detectorConfig.IntersectionID}',{this.detectorConfig.RoadName}',...
+                {this.detectorConfig.Direction}',{this.detectorConfig.City}');
             
             approachConfig=[];
             % Second, start to get the detector information for each
@@ -48,7 +49,7 @@ classdef aggregate_detector_to_approach_level
             for i=1:numPair % Loop for each pair
                 % Get the rows with the same [int, app, dir]
                 idx=(sum(ismember([{this.detectorConfig.IntersectionName}',{this.detectorConfig.RoadName}',{this.detectorConfig.Direction}'],...
-                    int_app_dir_pair(i,:),'rows'),2)==3);
+                    int_app_dir_pair(i,1:3),'rows'),2)==3);
                 tmp_data=this.detectorConfig(idx,:);
                 
                 % Find different categories of detectors: exclusive left,
@@ -61,7 +62,7 @@ classdef aggregate_detector_to_approach_level
                 % Find link properties
                 clear idx;
                 idx=(sum(ismember([{this.linkConfig.IntersectionName}',{this.linkConfig.RoadName}',{this.linkConfig.Direction}'],...
-                    int_app_dir_pair(i,:),'rows'),2)==3);
+                    int_app_dir_pair(i,1:3),'rows'),2)==3);
                 if(sum(idx))
                     link_properties=struct(...
                         'LinkLength',            this.linkConfig(idx).LinkLength,...
@@ -75,7 +76,7 @@ classdef aggregate_detector_to_approach_level
                 % Find signal settings
                 clear idx;
                 idx=(sum(ismember([{this.signalConfig.IntersectionName}',{this.signalConfig.RoadName}',{this.signalConfig.Direction}'],...
-                    int_app_dir_pair(i,:),'rows'),2)==3);
+                    int_app_dir_pair(i,1:3),'rows'),2)==3);
                 if(sum(idx))
                     signal_properties=struct(...
                         'CycleLength',              this.signalConfig(idx).CycleLength,...
@@ -90,7 +91,7 @@ classdef aggregate_detector_to_approach_level
                 % Find midlink properties
                 clear idx;
                 idx=(sum(ismember([{this.midlinkConfig.IntersectionName}',{this.midlinkConfig.RoadName}',{this.midlinkConfig.Direction}'],...
-                    int_app_dir_pair(i,:),'rows'),2)==3);
+                    int_app_dir_pair(i,1:3),'rows'),2)==3);
                 if(sum(idx))
                     midlink_properties=struct(...
                         'Location',              this.midlinkConfig(idx).Location,...
@@ -100,17 +101,19 @@ classdef aggregate_detector_to_approach_level
                 end
                 
                 approachConfig=[approachConfig;struct(...
-                    'intersection_name',            int_app_dir_pair(i,1),...
-                    'road_name',                    int_app_dir_pair(i,2),...
-                    'direction',                    int_app_dir_pair(i,3),...
-                    'exclusive_left_turn',          exclusive_left_turn,...
-                    'exclusive_right_turn',         exclusive_right_turn,...
-                    'advanced_detectors',           advanced_detectors,...
-                    'general_stopline_detectors',   general_stopline_detectors,...
-                    'link_properties',              link_properties,...
-                    'signal_properties',            signal_properties,...
-                    'midlink_properties',           midlink_properties,...
-                    'turning_count_properties',     [])];
+                    'intersection_name',            int_app_dir_pair(i,1),...       % Int. Name
+                    'intersection_id',              int_app_dir_pair{i,4},...       % Int. ID
+                    'city',                         int_app_dir_pair(i,5),...       % City
+                    'road_name',                    int_app_dir_pair(i,2),...       % Road Name
+                    'direction',                    int_app_dir_pair(i,3),...       % Direction
+                    'exclusive_left_turn',          exclusive_left_turn,...         % Exclu. left
+                    'exclusive_right_turn',         exclusive_right_turn,...        % Exclu. right
+                    'advanced_detectors',           advanced_detectors,...          % Advanced
+                    'general_stopline_detectors',   general_stopline_detectors,...  % General
+                    'link_properties',              link_properties,...             % Link properties
+                    'signal_properties',            signal_properties,...           % Signal properties
+                    'midlink_properties',           midlink_properties,...          % Midlink properties
+                    'turning_count_properties',     [])];                           % Turning count
             end          
         end
         
@@ -130,25 +133,26 @@ classdef aggregate_detector_to_approach_level
             for i=1:numCase
                 idx=ismember({data.Movement}',possibleMovements(i));
 
-                if(sum(idx)>0)
+                if(sum(idx)>0) % Has detectors belonging to the current type?
                     tmp_data=data(idx,:);
                     [tmpID,distanceToStopbar,detectorLength,numberOfLanes,leftTurnPocket,rightTurnPocket]=...
                         aggregate_detector_to_approach_level.get_detector_ids(tmp_data);
                     detectorList=[detectorList;struct(...
-                        'Movement',                     possibleMovements(i),...
-                        'IDs',                          tmpID,...
-                        'DetectorLength',               detectorLength,...
-                        'DistanceToStopbar',            distanceToStopbar,...
-                        'NumberOfLanes',                numberOfLanes,...
-                        'LeftTurnPocket',               leftTurnPocket,...
-                        'RightTurnPocket',              rightTurnPocket)];
+                        'Movement',                     possibleMovements(i),...    % Movement Type
+                        'IDs',                          tmpID,...                   % Detector IDs belonging to the same movement type
+                        'DetectorLength',               detectorLength,...          % Length of the detector
+                        'DistanceToStopbar',            distanceToStopbar,...       % Distance to Stopbar
+                        'NumberOfLanes',                numberOfLanes,...           % Number of lanes
+                        'LeftTurnPocket',               leftTurnPocket,...          % Left-turn pocket
+                        'RightTurnPocket',              rightTurnPocket)];          % Right-turn pocket
                 end
             end
         end
         
         function [possibleMovements]=traffic_movement_library(type)
             % This function returns all possible detectors belonging to
-            % the same type
+            % the same type: exclusive left/exclusive
+            % right/advanced/general stopbar
             
             switch(type)
                 case 'Left' % Exclusive left-turn detectors
@@ -190,19 +194,19 @@ classdef aggregate_detector_to_approach_level
             end
         end
         
-        function [int_app_dir_pair,numPair]=get_unique_int_app_dir_pair(int,app, dir)
+        function [int_app_dir_pair,numPair]=get_unique_int_app_dir_pair(int,intID,app,dir,city)
             % This function is to get unique pairs of [intersection, approach, direction]
             
             % Check the length of inputs
             if(length(int)~=length(app) || length(int)~=length(dir) || length(int)~=length(dir))
-                error('Wrong inputs: the lengths are not matched!')
+                error('Wrong inputs: the lengths do not match!')
             end
             
             % Get the number of detectors/rows
             numRow=size(int,1);
             
             % Get the first row
-            int_app_dir_pair=[int(1),app(1),dir(1)];
+            int_app_dir_pair=[int(1),app(1),dir(1),intID(1),city(1)];
             numPair=1;
             
             for r=2:numRow % Loop from Row 2 to the end
@@ -217,7 +221,7 @@ classdef aggregate_detector_to_approach_level
                     end
                 end
                 if(symbol==0) % Find a new one
-                    int_app_dir_pair=[int_app_dir_pair;[int(r),app(r),dir(r)]];
+                    int_app_dir_pair=[int_app_dir_pair;[int(r),app(r),dir(r),intID(r),city(r)]];
                     numPair=numPair+1;
                 end
             end

@@ -1,13 +1,13 @@
-classdef bluetooth_travel_time 
+classdef bluetooth_travel_time_provider 
     properties
         
-        inputFolderLocation             % Folder that stores the midblock counts
+        inputFolderLocation             % Folder that stores the bluetooth travel times
 
     end
     
     methods ( Access = public )
 
-        function [this]=bluetooth_travel_time(inputFolderLocation)
+        function [this]=bluetooth_travel_time_provider(inputFolderLocation)
             % This function is to obtain the bluetooth travel times
             
             % Obtain inputs
@@ -29,7 +29,7 @@ classdef bluetooth_travel_time
             
             data_out=[];
             if(exist(dataFile,'file'))
-                load(dataFile); % Inside: dataAll
+                load(dataFile); % Inside: bluetoothAll
                 dateID=datenum(sprintf('%d-%d-%d',queryMeasures.year,queryMeasures.month,queryMeasures.day));
                 
                 % Get data for that date
@@ -41,7 +41,7 @@ classdef bluetooth_travel_time
 
                 if(~isempty(data)) % Have data
                     time=(interval:interval:3600*24)';
-                    travel_time=bluetooth_travel_time.aggregate_travel_time_by_interval(data,time);
+                    travel_time=bluetooth_travel_time_provider.aggregate_travel_time_by_interval(data,time);
                     
                     if(queryMeasures.timeOfDay(end)>0) % Return time of day's data
                         startTime=queryMeasures.timeOfDay(1);
@@ -66,8 +66,8 @@ classdef bluetooth_travel_time
             
             data_out=[];
             if(exist(dataFile,'file'))
-                load(dataFile); % Inside: dataAll                
-                [data_out]=bluetooth_travel_time.cluster_data_by_query_measures(bluetoothAll,queryMeasures,interval);
+                load(dataFile); % Inside: bluetoothAll                
+                [data_out]=bluetooth_travel_time_provider.cluster_data_by_query_measures(bluetoothAll,queryMeasures,interval);
             else
                 fprintf('No such a data file:%s\n',fileName);
             end  
@@ -100,10 +100,10 @@ classdef bluetooth_travel_time
                     travel_time_median=[];                  
                 end
                 
-                travel_time=[travel_time, struct(...
-                    'travel_time_all', tmp_travel_time,...
-                    'travel_time_mean', travel_time_mean,...
-                    'travel_time_median', travel_time_median)];
+                travel_time=[travel_time; struct(...
+                    'all', tmp_travel_time,...
+                    'mean', travel_time_mean,...
+                    'median', travel_time_median)];
             end      
         end
         
@@ -151,7 +151,7 @@ classdef bluetooth_travel_time
             end
             
             % By day of week? Weekday? Weekend?
-            days=weekday({dataFile.Date_At_B})';
+            days=weekday({dataFile.Date_At_B});
             if (dayOfWeek>0)
                 if(dayOfWeek==8) % Weekday
                     idx=(days==1 | days==7);
@@ -169,7 +169,7 @@ classdef bluetooth_travel_time
                 data_out=[];
             else
                 time=(interval:interval:3600*24)';
-                travel_time=bluetooth_travel_time.aggregate_travel_time_by_interval(dataFile,time);
+                travel_time=bluetooth_travel_time_provider.aggregate_travel_time_by_interval(dataFile,time);
                 
                 if(queryMeasures.timeOfDay(end)>0) % Return time of day's data
                     startTime=queryMeasures.timeOfDay(1);
@@ -179,6 +179,9 @@ classdef bluetooth_travel_time
                     
                     data_out.time=time(idx);
                     data_out.travel_time=travel_time(idx,:);
+                else
+                    data_out.time=time;
+                    data_out.travel_time=travel_time;
                 end
             end            
         end

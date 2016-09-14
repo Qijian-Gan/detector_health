@@ -1,4 +1,4 @@
-%% This script is to run the detector health report for the City of Arcadia
+%% This script is to extract the clustered data to a model
 clear
 clc
 close all

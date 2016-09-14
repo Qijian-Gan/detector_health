@@ -8,7 +8,7 @@ classdef turning_count_provider
     methods ( Access = public )
 
         function [this]=turning_count_provider(inputFolderLocation)
-            % This function is to obtain the turning counts
+            %% This function is to obtain the turning counts
             
             % Obtain inputs
             if nargin==0 % Default input folder

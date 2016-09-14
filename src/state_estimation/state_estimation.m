@@ -4,8 +4,8 @@ classdef state_estimation
         approachConfig              % Approach-based configuration
         
         dataProvider_sensor         % Data provider: sensor
-        dataProvider_midlink        % Data provider: sensor
-        dataProvider_turningCount   % Data provider: sensor
+        dataProvider_midlink        % Data provider: midlink count
+        dataProvider_turningCount   % Data provider: turning count
         
         default_params              % Default parameters
         params                      % Current parameters
@@ -16,15 +16,23 @@ classdef state_estimation
     methods ( Access = public )
         
         function [this]=state_estimation(approachConfig,dataProvider_sensor, dataProvider_midlink, dataProvider_turningCount)
-            % This function is to do the state estimation
+            %% This function is to do the state estimation
             
+            % Check the number of inputs
+            if(nargin<2)
+                error('Not enough inputs!')
+            elseif(nargin>4)
+                error('Too many inputs!')
+            end
+                
+            % Check two most important inputs
             if(isempty(approachConfig)||isempty(dataProvider_sensor))
                 error('Wrong inputs');
-            end
-            
+            end            
             this.approachConfig=approachConfig;
             this.dataProvider_sensor=dataProvider_sensor;
             
+            % Additional inputs
             if(nargin>2)
                 this.dataProvider_midlink=dataProvider_midlink;
             end
@@ -34,31 +42,32 @@ classdef state_estimation
 
             % Default values
             this.default_params=struct(...
-                'cycle',                                     120,...        % Cycle length
+                'cycle',                                     120,...        % Cycle length (sec)
                 'green_left',                                0.2,...        % Green ratio for left turns
                 'green_through',                             0.35,...       % Green ratio for through movements
                 'green_right',                               0.35,...       % Green ratio for right turns
-                'vehicle_length',                            17,...         % Vehicle length
-                'speed_threshold_for_advanced_detector',     5,...          % Speed scale to determine levels of congestion
-                'speed_freeflow_for_advanced_detector',      35,...         % Speed scale to determine free-flow speed
+                'vehicle_length',                            17,...         % Vehicle length (ft)
+                'speed_threshold_for_advanced_detector',     5,...          % Speed scale to determine levels of congestion (mph)(need to be calibrated)
+                'occupancy_threshold_for_advanced_detector', 0.15, ...      % Occupancy threshold to determine levels of congestion (it seems this parameter is better;need to be calibrated)
+                'speed_freeflow_for_advanced_detector',      35,...         % Speed scale to determine free-flow speed (mph)
                 'flow_threshold_for_stopline_detector',      0.5,...        % Threshold to indicate low flow for stopbar detectors
-                'saturation_headway',                        2.0,...        % Saturation headway
-                'saturation_speed_left',                     15,...         % Left-turn speed at saturation
-                'saturation_speed_right',                    15,...         % Right-turn speed at saturation
-                'saturation_speed_through',                  25,...         % Speed of through movements at saturation
-                'start_up_lost_time',                        3,...
-                'jam_spacing',                               24,...
-                'distance_advanced_detector',                200,...
-                'left_turn_pocket',                          150,...
-                'right_turn_pocket',                         100);           
+                'saturation_headway',                        2.0,...        % Saturation headway (sec)
+                'saturation_speed_left',                     15,...         % Left-turn speed at saturation (mph): slower speed
+                'saturation_speed_right',                    15,...         % Right-turn speed at saturation (mph): slower speed
+                'saturation_speed_through',                  25,...         % Speed of through movements at saturation (mph)
+                'start_up_lost_time',                        2.5,...        % Start-up lost time (sec)
+                'jam_spacing',                               24,...         % Jam spacing (ft)
+                'distance_advanced_detector',                200,...        % Distance to the stopbar (ft)
+                'left_turn_pocket',                          150,...        % Left-turn pocket(ft)
+                'right_turn_pocket',                         100);          % Right-turn pocket(ft) 
             
             % Default proportions for left-turn, through, and right-turn
             % movements for each type of detectors
             this.default_proportions=struct(...
                 'Left_Turn',                        [1, 0, 0],...           % Exclusive left turn: no through and right-turn movements
-                'Left_Turn_Queue',                  [0, 0, 0],...           % Currently tends not to use this value
+                'Left_Turn_Queue',                  [0, 0, 0],...           % LT Queue: currently tends not to use this value
                 'Right_Turn',                       [0, 0, 1],...           % Exclusive right turn: no through and left-turn movements
-                'Right_Turn_Queue',                 [0, 0, 0],...           % Currently tends not to use this value
+                'Right_Turn_Queue',                 [0, 0, 0],...           % RT Queue: currently tends not to use this value
                 'Advanced',                         [0.15, 0.8, 0.05],...   % Advanced detectors for all movements
                 'Advanced_Left_Turn',               [1, 0, 0],...           % Advanced detectors for left turns only
                 'Advanced_Right_Turn',              [0, 0, 1],...           % Advanced detectors for right turns only
@@ -73,52 +82,42 @@ classdef state_estimation
                 'Through_and_Right',                [0, 0.85, 0.15]);       % Stop-line detectors for through and right-turn movements
         end
         
-        %% Functions to get/update params and proportions
-                
-        function [approach_out]=get_default_proportions(this,approach_in)
+        %% Functions to get/update params and proportions        
+        function [proportions]=update_vehicle_proportions(this,approach_in,queryMeasures)
+            % This function is to update vehicle proportions if possible
             
-            approach_out=approach_in;
-            approach_out.proportions=this.default_proportions;
-            
-        end        
-        
-        function [approach_out]=update_vehicle_proportions(this,approach_in,queryMeasures)
-            
-            % Get default proportions
-            [approach_in]=this.get_default_proportions(approach_in);  
+            % *******Update the default values if possible
             % Get turning count data
-            [approach_in]=this.get_turning_count_for_approach(approach_in,queryMeasures);    
-            
-            
-            
-            % Get turning proportions
-            if(~isempty(approach_in.turning_count_properties.data)) % If not empty
-                data=approach_in.turning_count_properties.data;
+            turning_count_properties=this.get_turning_count_for_approach(approach_in,queryMeasures);    
+
+            % If not empty: have turning count information
+            if(~isempty(turning_count_properties.data)) 
+                % Get turning proportions
                 
-                time=data.time;
+                data=turning_count_properties.data;
                 
-                totalVolume=sum(data.volume,2);
-                proportionLeft=data.volume(:,1)./totalVolume;
-                proportionThrough=data.volume(:,2)./totalVolume;
-                proportionRight=data.volume(:,3)./totalVolume;
+                time=data.time; % Get the time
+                
+                totalVolume=sum(data.volume,2); % Get the total
+                proportionLeft=data.volume(:,1)./totalVolume; % Get the LT proportion
+                proportionThrough=data.volume(:,2)./totalVolume; % Get the through proportion
+                proportionRight=data.volume(:,3)./totalVolume; % Get the RT proportion
                     
-                if(isnan(queryMeasures.timeOfDay)) % No specific time of day
+                if(isnan(queryMeasures.timeOfDay)) % No specific time of day: average over all time stamps
                     avgProportionLeft=mean(proportionLeft);
                     avgProportionThrough=mean(proportionThrough);
                     avgProportionRight=mean(proportionRight);
                 else % Given a specific time
                     startTime=queryMeasures.timeOfDay(1);
                     endTime=queryMeasures.timeOfDay(end);
+
+                    idx=(time>=startTime & time<endTime);
                     
-                    idx1=(time>=startTime);
-                    idx2=(time<endTime);
-                    idx=(idx1+idx2==2);
-                    
-                    if(sum(idx)==0) % Do not have data for that time period
+                    if(sum(idx)==0) % Do not have data for that time period: average over all time stamps
                         avgProportionLeft=mean(proportionLeft);
                         avgProportionThrough=mean(proportionThrough);
                         avgProportionRight=mean(proportionRight);
-                    else % Have data
+                    else % Have data: average over the given time period
                         avgProportionLeft=mean(proportionLeft(idx));
                         avgProportionThrough=mean(proportionThrough(idx));
                         avgProportionRight=mean(proportionRight(idx));
@@ -127,42 +126,46 @@ classdef state_estimation
                 
                 % Update the proportions in the default settings
                 % All movements
-                approach_in.proportions.Advanced=[avgProportionLeft,avgProportionThrough,avgProportionRight];
-                approach_in.proportions.All_Movements=approach_in.proportions.Advanced;
+                proportions.Advanced=[avgProportionLeft,avgProportionThrough,avgProportionRight];
+                proportions.All_Movements=proportions.Advanced;
                 
                 % Through and Right
-                approach_in.proportions.Advanced_Through_and_Right=...
+                proportions.Advanced_Through_and_Right=...
                     [0,avgProportionThrough/(avgProportionThrough+avgProportionRight),...
                     avgProportionRight/(avgProportionThrough+avgProportionRight)];
-                approach_in.proportions.Through_and_Right=approach_in.proportions.Advanced_Through_and_Right;
+                proportions.Through_and_Right=proportions.Advanced_Through_and_Right;
                 
                 % Left and Through
-                approach_in.proportions.Advanced_Left_and_Through=...
+                proportions.Advanced_Left_and_Through=...
                     [avgProportionLeft/(avgProportionThrough+avgProportionLeft),...
                     avgProportionThrough/(avgProportionThrough+avgProportionLeft),0];
-                approach_in.proportions.Left_and_Through=approach_in.proportions.Advanced_Left_and_Through;
+                proportions.Left_and_Through=proportions.Advanced_Left_and_Through;
                 
                 % Left and Right
-                approach_in.proportions.Advanced_Left_and_Right=...
+                proportions.Advanced_Left_and_Right=...
                     [avgProportionLeft/(avgProportionRight+avgProportionLeft),0,...
                     avgProportionRight/(avgProportionRight+avgProportionLeft)];
-                approach_in.proportions.Left_and_Right=approach_in.proportions.Advanced_Left_and_Right;
-                
+                proportions.Left_and_Right=proportions.Advanced_Left_and_Right;
+              
+            else % Not turning count information available
+                proportions=this.default_proportions;
             end
-            
-            approach_out=approach_in;
             
         end
         
         %% ***************Functions to get data*****************
-        function [approach_out]=get_turning_count_for_approach(this,approach_in, queryMeasures)
+        function [turning_count_properties]=get_turning_count_for_approach(this,approach_in, queryMeasures)
+            % This function is to get turning count data for a given
+            % approach with given query measures
             
-            approach_out=approach_in;
+            % Get the file name
             fileName=sprintf('TP_%s_%s_%s.mat',approach_in.intersection_name,...
                 strrep(approach_in.road_name,' ', '_'),approach_in.direction);
-            if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) % For a particular date
+            
+            % If: for a particular date
+            if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) 
                 data_out=this.dataProvider_turningCount.get_data_for_a_date(fileName,queryMeasures);
-            else % For historical data  
+            else %Else: for historical data  
                 queryMeasures.timeOfDay=nan;
                 [data_out]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
                 
@@ -175,7 +178,7 @@ classdef state_estimation
                 end
             end
             
-            approach_out.turning_count_properties.data=data_out;
+            turning_count_properties.data=data_out;
         end
         
         function [approach_out]=get_midlink_data_for_approach(this,approach_in, queryMeasures)
@@ -201,51 +204,51 @@ classdef state_estimation
             approach_out.midlink_properties.data=data_out;
         end
         
-        function [approachData]=get_sensor_data_for_approach(this,approach,queryMeasures)
+        function [approach_out]=get_sensor_data_for_approach(this,approach_in,queryMeasures)
             % This function is to get data for a given approach with specific query measures
             
             % First, get the flow and occ data for exclusive left-turn detectors if exist
             tmp=[];
-            if(~isempty(approach.exclusive_left_turn)) % Exclusive left-turn detectors exist
-                for i=1:size(approach.exclusive_left_turn,1) % Check the types of exclusive left-turn detectors: n-by-1
+            if(~isempty(approach_in.exclusive_left_turn)) % Exclusive left-turn detectors exist
+                for i=1:size(approach_in.exclusive_left_turn,1) % Check the types of exclusive left-turn detectors: n-by-1
                     tmp=[tmp;...
-                        this.get_average_data_for_movement(approach.exclusive_left_turn(i),queryMeasures)];
+                        this.get_average_data_for_movement(approach_in.exclusive_left_turn(i),queryMeasures)];
                 end
-                approach.exclusive_left_turn=tmp;
+                approach_in.exclusive_left_turn=tmp;
             end
             
             % Second, get the flow and occ data for exclusive right-turn detectors if exist
             tmp=[];
-            if(~isempty(approach.exclusive_right_turn))  % Exclusive right-turn detectors exist
-                for i=1:size(approach.exclusive_right_turn,1) % Check the types of exclusive right-turn detectors: n-by-1
+            if(~isempty(approach_in.exclusive_right_turn))  % Exclusive right-turn detectors exist
+                for i=1:size(approach_in.exclusive_right_turn,1) % Check the types of exclusive right-turn detectors: n-by-1
                     tmp=[tmp;...
-                        this.get_average_data_for_movement(approach.exclusive_right_turn(i),queryMeasures)];
+                        this.get_average_data_for_movement(approach_in.exclusive_right_turn(i),queryMeasures)];
                 end
-                approach.exclusive_right_turn=tmp;
+                approach_in.exclusive_right_turn=tmp;
             end
             
             % Third, get the flow and occ data for advanced detectors if exist
             tmp=[];
-            if(~isempty(approach.advanced_detectors)) % Advanced detectors exist
-                for i=1:size(approach.advanced_detectors,1) % Check the types of advanced detectors: n-by-1
+            if(~isempty(approach_in.advanced_detectors)) % Advanced detectors exist
+                for i=1:size(approach_in.advanced_detectors,1) % Check the types of advanced detectors: n-by-1
                     tmp=[tmp;...
-                        this.get_average_data_for_movement(approach.advanced_detectors(i),queryMeasures)];
+                        this.get_average_data_for_movement(approach_in.advanced_detectors(i),queryMeasures)];
                 end
-                approach.advanced_detectors=tmp;
+                approach_in.advanced_detectors=tmp;
             end
             
             % Fourth, get the flow and occ data for general stopline detectors if exist
             tmp=[];
-            if(~isempty(approach.general_stopline_detectors)) % General stop-line detectors exist
-                for i=1:size(approach.general_stopline_detectors,1) % Check the types of stop-line detectors: n-by-1
+            if(~isempty(approach_in.general_stopline_detectors)) % General stop-line detectors exist
+                for i=1:size(approach_in.general_stopline_detectors,1) % Check the types of stop-line detectors: n-by-1
                     tmp=[tmp;...
-                        this.get_average_data_for_movement(approach.general_stopline_detectors(i),queryMeasures)];
+                        this.get_average_data_for_movement(approach_in.general_stopline_detectors(i),queryMeasures)];
                 end
-                approach.general_stopline_detectors=tmp;
+                approach_in.general_stopline_detectors=tmp;
             end
             
             % Return the average flow and occ data
-            approachData=approach;
+            approach_out=approach_in;
         end
         
         function [movementData_Out]=get_average_data_for_movement(this,movementData_In,queryMeasures)
@@ -296,143 +299,164 @@ classdef state_estimation
             data=this.dataProvider_sensor.clustering(id, queryMeasures);
         end
         
-        %% ***************Functions to get traffic states and estimate vehicle queues*****************
-        
-        function [approachData]=get_traffic_condition_by_approach(this,approach)
+        %% ***************Functions to get traffic states and estimate vehicle queues*****************        
+        function [decision_making]=get_traffic_condition_by_approach(this,approach_in,queryMeasures)
             % This function is to get traffic conditions by approach:
             % exclusive left turns, exclusive right turns, stop-line
-            % detectors, and advanced detectors. Rates are assigned
-            % according to the relation between the current occupancy and the
-            % occupancy scales
+            % detectors, and advanced detectors. 
             
-            % Update parameter settings
-            this.params=this.update_signal_setting(approach.signal_properties);
+            % Update parameter settings, especially the traffic signals
+            this.params=this.update_signal_setting(approach_in.signal_properties);
+            
+            % Get the time
+            decision_making.time=queryMeasures.timeOfDay(end);
             
             % Check exclusive left turn
-            approach.decision_making.exclusive_left_turn.rates=[];
-            approach.decision_making.exclusive_left_turn.speeds=[];
-            if(~isempty(approach.exclusive_left_turn)) % Exclusive left-turn movement exists
-                for i=1:size(approach.exclusive_left_turn,1) % Check the state for each type of exclusive left-turn movments
-                    % Return rates and the corresponding occupancy scales
-                    [rates,speeds]=this.check_detector_status...
-                        (approach.exclusive_left_turn(i).avg_data,approach.exclusive_left_turn(i).status,...
-                        approach.exclusive_left_turn(i).DetectorLength, approach.exclusive_left_turn(i).NumberOfLanes,...
-                        approach.exclusive_left_turn(i).Movement,'exclusive_left_turn');
+            decision_making.exclusive_left_turn.rates=[];
+            decision_making.exclusive_left_turn.speeds=[];
+            decision_making.exclusive_left_turn.occupancies=[];
+            if(~isempty(approach_in.exclusive_left_turn)) % Exclusive left-turn movement exists
+                for i=1:size(approach_in.exclusive_left_turn,1) % Check the state for each type of exclusive left-turn movments
+                    % Return rates and the corresponding speed/occupancy scales
+                    [rates,speeds,occupancies]=this.check_detector_status...
+                        (approach_in.exclusive_left_turn(i).avg_data,approach_in.exclusive_left_turn(i).status,...
+                        approach_in.exclusive_left_turn(i).DetectorLength, approach_in.exclusive_left_turn(i).NumberOfLanes,...
+                        approach_in.exclusive_left_turn(i).Movement,'exclusive_left_turn');
                     
-                    approach.decision_making.exclusive_left_turn.rates=...
-                        [approach.decision_making.exclusive_left_turn.rates;rates];
-                    approach.decision_making.exclusive_left_turn.speeds=...
-                        [approach.decision_making.exclusive_left_turn.speeds;speeds];
+                    decision_making.exclusive_left_turn.rates=...
+                        [decision_making.exclusive_left_turn.rates;rates];
+                    decision_making.exclusive_left_turn.speeds=...
+                        [decision_making.exclusive_left_turn.speeds;speeds];
+                    decision_making.exclusive_left_turn.occupancies=...
+                        [decision_making.exclusive_left_turn.occupancies;occupancies];
                 end
             end
             
             % Check exclusive right turn
-            approach.decision_making.exclusive_right_turn.rates=[];
-            approach.decision_making.exclusive_right_turn.speeds=[];
-            if(~isempty(approach.exclusive_right_turn)) % Exclusive left-turn movement exists
-                for i=1:size(approach.exclusive_right_turn,1) % Check the state for each type of exclusive right-turn movments
-                    % Return rates and the corresponding occupancy scales
-                    [rates,speeds]=this.check_detector_status...
-                        (approach.exclusive_right_turn(i).avg_data,approach.exclusive_right_turn(i).status,...
-                        approach.exclusive_right_turn(i).DetectorLength, approach.exclusive_right_turn(i).NumberOfLanes,...
-                        approach.exclusive_right_turn(i).Movement,'exclusive_right_turn');
+            decision_making.exclusive_right_turn.rates=[];
+            decision_making.exclusive_right_turn.speeds=[];
+            decision_making.exclusive_right_turn.occupancies=[];
+            if(~isempty(approach_in.exclusive_right_turn)) % Exclusive right-turn movement exists
+                for i=1:size(approach_in.exclusive_right_turn,1) % Check the state for each type of exclusive right-turn movments
+                    % Return rates and the corresponding speed/occupancy scales
+                    [rates,speeds,occupancies]=this.check_detector_status...
+                        (approach_in.exclusive_right_turn(i).avg_data,approach_in.exclusive_right_turn(i).status,...
+                        approach_in.exclusive_right_turn(i).DetectorLength, approach_in.exclusive_right_turn(i).NumberOfLanes,...
+                        approach_in.exclusive_right_turn(i).Movement,'exclusive_right_turn');
                     
-                    approach.decision_making.exclusive_right_turn.rates=...
-                        [approach.decision_making.exclusive_right_turn.rates;rates];
-                    approach.decision_making.exclusive_right_turn.speeds=...
-                        [approach.decision_making.exclusive_right_turn.speeds;speeds];
+                    decision_making.exclusive_right_turn.rates=...
+                        [decision_making.exclusive_right_turn.rates;rates];
+                    decision_making.exclusive_right_turn.speeds=...
+                        [decision_making.exclusive_right_turn.speeds;speeds];
+                    decision_making.exclusive_right_turn.occupancies=...
+                        [decision_making.exclusive_right_turn.occupancies;occupancies];
                 end
             end
             
             % Check advanced detectors
-            approach.decision_making.advanced_detectors.rates=[];
-            approach.decision_making.advanced_detectors.speeds=[];
-            if(~isempty(approach.advanced_detectors)) % Advanced detectors exist
-                for i=1:size(approach.advanced_detectors,1) % Check the state for each type of advanced detectors
-                    % Return rates and the corresponding occupancy scales
-                    [rates,speeds]=this.check_detector_status...
-                        (approach.advanced_detectors(i).avg_data,approach.advanced_detectors(i).status,...
-                        approach.advanced_detectors(i).DetectorLength,approach.advanced_detectors(i).NumberOfLanes,...
-                        approach.advanced_detectors(i).Movement,'advanced_detectors');
+            decision_making.advanced_detectors.rates=[];
+            decision_making.advanced_detectors.speeds=[];
+            decision_making.advanced_detectors.occupancies=[];
+            if(~isempty(approach_in.advanced_detectors)) % Advanced detectors exist
+                for i=1:size(approach_in.advanced_detectors,1) % Check the state for each type of advanced detectors
+                    % Return rates and the corresponding speed/occupancy scales
+                    [rates,speeds,occupancies]=this.check_detector_status...
+                        (approach_in.advanced_detectors(i).avg_data,approach_in.advanced_detectors(i).status,...
+                        approach_in.advanced_detectors(i).DetectorLength,approach_in.advanced_detectors(i).NumberOfLanes,...
+                        approach_in.advanced_detectors(i).Movement,'advanced_detectors');
                     
-                    approach.decision_making.advanced_detectors.rates=...
-                        [approach.decision_making.advanced_detectors.rates;rates];
-                    approach.decision_making.advanced_detectors.speeds=...
-                        [approach.decision_making.advanced_detectors.speeds;speeds];
+                    decision_making.advanced_detectors.rates=...
+                        [decision_making.advanced_detectors.rates;rates];
+                    decision_making.advanced_detectors.speeds=...
+                        [decision_making.advanced_detectors.speeds;speeds];
+                    decision_making.advanced_detectors.occupancies=...
+                        [decision_making.advanced_detectors.occupancies;occupancies];
                 end
             end
             
             % Check general stopline detectors
-            approach.decision_making.general_stopline_detectors.rates=[];
-            approach.decision_making.general_stopline_detectors.speeds=[];
-            if(~isempty(approach.general_stopline_detectors)) % Stop-line detectors exist
-                for i=1:size(approach.general_stopline_detectors,1) % Check the state for each type of stop-line detectors
-                    % Return rates and the corresponding occupancy scales
-                    [rates,speeds]=this.check_detector_status...
-                        (approach.general_stopline_detectors(i).avg_data,approach.general_stopline_detectors(i).status,...
-                        approach.general_stopline_detectors(i).DetectorLength, approach.general_stopline_detectors(i).NumberOfLanes,...
-                        approach.general_stopline_detectors(i).Movement,'general_stopline_detectors');
+            decision_making.general_stopline_detectors.rates=[];
+            decision_making.general_stopline_detectors.speeds=[];
+            decision_making.general_stopline_detectors.occupancies=[];
+            if(~isempty(approach_in.general_stopline_detectors)) % Stop-line detectors exist
+                for i=1:size(approach_in.general_stopline_detectors,1) % Check the state for each type of stop-line detectors
+                    % Return rates and the corresponding speed/occupancy scales
+                    [rates,speeds,occupancies]=this.check_detector_status...
+                        (approach_in.general_stopline_detectors(i).avg_data,approach_in.general_stopline_detectors(i).status,...
+                        approach_in.general_stopline_detectors(i).DetectorLength, approach_in.general_stopline_detectors(i).NumberOfLanes,...
+                        approach_in.general_stopline_detectors(i).Movement,'general_stopline_detectors');
                     
-                    approach.decision_making.general_stopline_detectors.rates=...
-                        [approach.decision_making.general_stopline_detectors.rates;rates];
-                    approach.decision_making.general_stopline_detectors.speeds=...
-                        [approach.decision_making.general_stopline_detectors.speeds;speeds];
+                    decision_making.general_stopline_detectors.rates=...
+                        [decision_making.general_stopline_detectors.rates;rates];
+                    decision_making.general_stopline_detectors.speeds=...
+                        [decision_making.general_stopline_detectors.speeds;speeds];
+                    decision_making.general_stopline_detectors.occupancies=...
+                        [decision_making.general_stopline_detectors.occupancies;occupancies];
                 end
             end
             
-            % Provide assessment according to the rates from exclusive
+            % Provide assessments according to the rates from exclusive
             % left turns, exclusive right turns, stop-line detectors, and
             % advanced detectors
-            [status_assessment,queue_assessment]=this.traffic_state_and_queue_assessment(approach);
+            [status_assessment,queue_assessment]=this.traffic_state_and_queue_assessment(approach_in,decision_making);
             
-            approach.decision_making.status_assessment.left_turn=status_assessment(1);
-            approach.decision_making.status_assessment.through=status_assessment(2);
-            approach.decision_making.status_assessment.right_turn=status_assessment(3);
+            decision_making.status_assessment.left_turn=status_assessment(1);
+            decision_making.status_assessment.through=status_assessment(2);
+            decision_making.status_assessment.right_turn=status_assessment(3);
             
-            approach.decision_making.queue_assessment.left_turn=queue_assessment(1);
-            approach.decision_making.queue_assessment.through=queue_assessment(2);
-            approach.decision_making.queue_assessment.right_turn=queue_assessment(3);
-            
-            % Return the decision making results
-            approachData=approach;
+            decision_making.queue_assessment.left_turn=queue_assessment(1);
+            decision_making.queue_assessment.through=queue_assessment(2);
+            decision_making.queue_assessment.right_turn=queue_assessment(3);
+
         end
         
-        function [rates,speeds]=check_detector_status(this,data,status,detector_length,numberOfLanes,movement,type)
-            % This function is to check the status of each detector
-            % belonging to the same detector type, e.g., exclusive left
-            % turns
+        function [rates,speeds,occupancies]=check_detector_status(this,data,status,detector_length,numberOfLanes,movement,type)
+            % This function is to check the status of individual detector
+            % which belongs to the same detector type, e.g., exclusive left
+            % turns.
             
-            numDetector=size(data,1); % Get the number of detectors
+            % Get the number of detectors belonging to the same type
+            numDetector=size(data,1); 
+            
+            % Initialization
             rates=[];
             speeds=[];
+            occupancies=[];
+            
+            % Check different types: Two different algorithms
             switch type
                 % For stop-line detectors
                 case {'exclusive_left_turn','exclusive_right_turn','general_stopline_detectors'}
                     for i=1:numDetector
                         if(strcmp(cellstr(status(i,:)),'Good Data')) % Only use good data
                             % Use average values of flow and occupancy
-                            [rate,speed]=this.get_occupancy_scale_and_rate_stopline_detector...
+                            [rate,speed,occupancy]=this.get_occupancy_scale_and_rate_stopline_detector...
                                 (data(i).avgFlow,data(i).avgOccupancy,detector_length(i),numberOfLanes(i),movement,type);
-                            rates=[rates;rate];
-                            speeds=[speeds;speed];
+                            rates=[rates,rate];
+                            speeds=[speeds,speed];
+                            occupancies=[occupancies,occupancy];
                         else % Otherwise, say "Unknown"
-                            rates=[rates;{'Unknown'}];
-                            speeds=[speeds;0];
+                            rates=[rates,{'Unknown'}];
+                            speeds=[speeds,0];
+                            occupancies=[occupancies,0];
                         end
                     end
-                    % For advanced detectors
+                    
+                % For advanced detectors
                 case 'advanced_detectors'
                     for i=1:numDetector
                         if(strcmp(cellstr(status(i,:)),'Good Data')) % Only use good data
                             % Use average values of flow, occupancy, and
                             % detector length
-                            [rate,speed]=this.get_occupancy_scale_and_rate_advanced_detector...
+                            [rate,speed,occupancy]=this.get_occupancy_scale_and_rate_advanced_detector...
                                 (data(i).avgFlow,data(i).avgOccupancy,detector_length(i),numberOfLanes(i));
-                            rates=[rates;rate];
-                            speeds=[speeds;speed];
+                            rates=[rates,rate];
+                            speeds=[speeds,speed];
+                            occupancies=[occupancies,occupancy];
                         else % Otherwise, say "Unknown"
-                            rates=[rates;{'Unknown'}];
-                            speeds=[speeds;0];
+                            rates=[rates,{'Unknown'}];
+                            speeds=[speeds,0];
+                            occupancies=[occupancies,0];
                         end
                     end
                 otherwise
@@ -441,36 +465,46 @@ classdef state_estimation
             
         end
         
-        function [rate,speed]=get_occupancy_scale_and_rate_advanced_detector(this,flow,occ,detector_length,numberOfLanes)
+        function [rate,speed,occupancy]=get_occupancy_scale_and_rate_advanced_detector(this,flow,occ,detector_length,numberOfLanes)
             % This function is to get the rate and speed for advanced detectors. In this case, we consider advanced
             % detectors are different from other stop-line detectors since
             % traffic flow is less impacted by traffic signals
+            % Flow: veh/hr/ln
+            % Occ: #sec in one hour
             
             % Get effective length that will occupy the advanced detectors
             effectiveLength=detector_length+this.params.vehicle_length;
             
             % Get the occupancy threshold to divide the state into low and
             % high occupancies
-            occThreshold=min(flow/numberOfLanes*effectiveLength/5280/this.params.speed_threshold_for_advanced_detector,1);
+            occThreshold=this.params.occupancy_threshold_for_advanced_detector; % Tend to use this one since it seems occupancy is more reliable
+            %             occThreshold=min(flow*effectiveLength/5280/this.params.speed_threshold_for_advanced_detector,1);
             
             % Determine the rating based on the average occupancy
             if(occ>=occThreshold)
-                rate={'High Occupancy'};
+                rate={'High Occupancy'}; % Congested
             else
-                rate={'Low Occupancy'};
+                rate={'Low Occupancy'}; % Uncongested
             end
             
-            speed=flow/numberOfLanes*effectiveLength/5280/min(occ,1);
+            % Store the speed and occupancy information
+            speed=flow*effectiveLength/5280/min(occ,1);
+            occupancy=occ; 
             
         end
         
-        function [rate,speed]=get_occupancy_scale_and_rate_stopline_detector(this,flow,occ,detector_length,numberOfLanes,detectorMovement,type)
-            % This function is to get the rate and speed for stop-line detectors. In this case, we consider stop-line
+        function [rate,speed,occupancy]=get_occupancy_scale_and_rate_stopline_detector(this,flow,occ,detector_length,numberOfLanes,detectorMovement,type)
+            % This function is to get the rate, speed, and occupancy for stop-line detectors. In this case, we consider stop-line
             % detectors (exclusive left, exclusive right, and other general stop-line detectors)
             % are different from advanced detectors since traffic flow is
             % mostly impacted by traffic signals.
             
-            % Get the green ratio
+            % NOTE: Here we consider flow is the vehicle flow for the
+            % detector (per lane), and occupancy is the seconds
+            % it occupies (per lane)
+            
+            % Get the green ratio: should be updated first if historical
+            % signal information can be obtained
             switch type
                 case 'exclusive_left_turn'
                     green_ratio=this.params.green_left;
@@ -486,47 +520,61 @@ classdef state_estimation
             % headway
             % May not need to use this value if we consider the start-up
             % lost time is the same as the yellow and all-red time
-            start_up_lost_time=this.params.start_up_lost_time;  
-            
+            start_up_lost_time=this.params.start_up_lost_time;              
             saturation_headway=this.params.saturation_headway;
             
+            % Get the saturation speed for different movements
             saturation_speed_left=this.params.saturation_speed_left;
             saturation_speed_right=this.params.saturation_speed_right;
             saturation_speed_through=this.params.saturation_speed_through;
             
+            % Time to pass a detector for different movements (in seconds)
             time_to_pass_left=(detector_length+this.params.vehicle_length)*3600/saturation_speed_left/5280;
             time_to_pass_right=(detector_length+this.params.vehicle_length)*3600/saturation_speed_right/5280;
             time_to_pass_through=(detector_length+this.params.vehicle_length)*3600/saturation_speed_through/5280;
             
             % Get proportions of vehicles for left-turn, through, and right-turn
-            % movements
+            % movements. We use default values since it is hard to tell the
+            % actural proportions at the detector level due to the limited
+            % detection accuracy.
             proportion_left=state_estimation.find_traffic_proportion(detectorMovement,this.default_proportions,'Left');
             proportion_through=state_estimation.find_traffic_proportion(detectorMovement,this.default_proportions,'Through');
             proportion_right=state_estimation.find_traffic_proportion(detectorMovement,this.default_proportions,'Right');
             
-            numVeh=flow*this.params.cycle/3600;
-            numVehLeft=numVeh*proportion_left;
-            numVehThrough=numVeh*proportion_through;
-            numVehRight=numVeh*proportion_right;
+            % Get the number of vehicles for each movements
+            % The flow is per lane
+            numVeh=flow*this.params.cycle/3600; % Total per lane
+            numVehLeft=numVeh*proportion_left; % Left per lane
+            numVehThrough=numVeh*proportion_through; % Through per lane
+            numVehRight=numVeh*proportion_right; % Right per lane
             
-            % Get the discharging time given the current flow-rate
+            % Get the discharging time given the current number of vehicles
             dischargingTime=start_up_lost_time+(time_to_pass_left*numVehLeft+...
-                time_to_pass_right*numVehRight+time_to_pass_through*numVehThrough)/numberOfLanes; % Divided by number of lanes
-            occ_threshold=min(1,dischargingTime/this.params.cycle+(1-green_ratio)); % Get the threshold for occupancy
+                time_to_pass_right*numVehRight+time_to_pass_through*numVehThrough);
             
-            capacity=numberOfLanes*(3600/saturation_headway)*green_ratio; % Need to time the number of lanes
+            % Get the threshold for occupancy: the red time + the discharging
+            % time. It is bounded by 1 since our estimates are very rough.
+            occ_threshold=min(1,dischargingTime/this.params.cycle+(1-green_ratio)); 
+            
+            % Need to time the number of lanes
+            capacity=numberOfLanes*(3600/saturation_headway)*green_ratio; 
             
             if(occ<occ_threshold) % Under-saturated
                 rate={'Under Saturated'};
-            else
-                if(flow>capacity*this.params.flow_threshold_for_stopline_detector) % Oversaturated with high flow
+            else % In saturated conditions
+                if(numberOfLanes*flow>capacity*this.params.flow_threshold_for_stopline_detector) 
+                    % Oversaturated with high flow. In this case, traffic
+                    % in the downstream is considered as uncongested
                     rate={'Over Saturated With No Spillback'};
                 else
-                    rate={'Over Saturated With Spillback'}; % Oversaturated with low flow
+                    % Oversaturated with low flow. In this case, it is
+                    % possible to have queue spillback
+                    rate={'Over Saturated With Spillback'}; 
                 end
             end
             
             speed=0; % For stopline detectors, no need to use speed information
+            occupancy=occ_threshold; % Save the occupancy threshold for further potential useage
         end
         
         function [params]=update_signal_setting(this, signal_properties)
@@ -561,70 +609,66 @@ classdef state_estimation
             end
             
         end
-        
-        
-        function [status_assessment,queue_assessment]=traffic_state_and_queue_assessment(this,approach)
+                
+        function [status_assessment,queue_assessment]=traffic_state_and_queue_assessment(this,approach,decision_making)
             % This function is for traffic state and queue assessment
             
             if(isempty(approach.exclusive_left_turn)&& isempty(approach.exclusive_right_turn)...
-                    && isempty(approach.general_stopline_detectors) && isempty(approach.advanced_detectors)) % No Detector
+                    && isempty(approach.general_stopline_detectors) && isempty(approach.advanced_detectors)) 
+                % IF no Detector
                 status_assessment={'No Detector','No Detector','No Detector'};
                 queue_assessment=[NaN, NaN, NaN];
                 
             else              
-                
-                % Get the aggregated states and speeds for left-turn, through,
+                % Get the aggregated states and speeds/occupancies for left-turn, through,
                 % and right-turn movements for different types of detectors                 
                 if(~isempty(approach.advanced_detectors))% Check advanced detectors
-                    
                     % Get the states of left-turn, through, and right-turn
                     % from advanded detectors
                     possibleAdvanced.Through={'Advanced','Advanced Through','Advanced Through and Right','Advanced Left and Through'};
                     possibleAdvanced.Left={'Advanced','Advanced Left Turn', 'Advanced Left and Through', 'Advanced Left and Right' };
                     possibleAdvanced.Right={'Advanced','Advanced Right Turn','Advanced Through and Right','Advanced Left and Right' };
                     
-                    [advanced_status,avg_speed]=state_estimation.check_aggregate_rate_by_movement_type...
-                        (approach.advanced_detectors, possibleAdvanced, approach.decision_making.advanced_detectors,'advanced detectors');
+                    [advanced_status,avg_speed,avg_occ]=state_estimation.check_aggregate_rate_by_movement_type...
+                        (approach.advanced_detectors, possibleAdvanced, decision_making.advanced_detectors,'advanced detectors');
                 else
                     advanced_status=[0, 0, 0];
                     avg_speed=[0, 0, 0];
+                    avg_occ=[0,0,0];
                 end
                                 
                 if(~isempty(approach.general_stopline_detectors)) % Check general stopline detectors
-                    
                     % Get the states of left-turn, through, and right-turn
                     % from stopline detectors
                     possibleGeneral.Through={'All Movements','Through', 'Left and Through', 'Through and Right'};
                     possibleGeneral.Left={'All Movements','Left and Right', 'Left and Through'};
                     possibleGeneral.Right={'All Movements','Left and Right', 'Through and Right' };
-                    [stopline_status,~]=state_estimation.check_aggregate_rate_by_movement_type...
-                        (approach.general_stopline_detectors, possibleGeneral,approach.decision_making.general_stopline_detectors,'stopline detectors');
+                    [stopline_status,~,~]=state_estimation.check_aggregate_rate_by_movement_type...
+                        (approach.general_stopline_detectors, possibleGeneral,decision_making.general_stopline_detectors,'stopline detectors');
                 else
                     stopline_status=[0, 0, 0];
                 end                
                 
                 if(~isempty(approach.exclusive_right_turn)) % Check exclusive right turn detectors
-                    
                     % Get the states of left-turn, through, and right-turn
                     % from exclusive right-turn detectors
                     possibleExclusiveRight.Through=[];
                     possibleExclusiveRight.Left=[];
                     possibleExclusiveRight.Right={'Right Turn','Right Turn Queue'};
-                    [exc_right_status,~]=state_estimation.check_aggregate_rate_by_movement_type...
-                        (approach.exclusive_right_turn,possibleExclusiveRight,approach.decision_making.exclusive_right_turn,'stopline detectors');
+                    [exc_right_status,~,~]=state_estimation.check_aggregate_rate_by_movement_type...
+                        (approach.exclusive_right_turn,possibleExclusiveRight,decision_making.exclusive_right_turn,'stopline detectors');
                 else
                     exc_right_status=[0, 0, 0];
                 end                
                 
                 if(~isempty(approach.exclusive_left_turn)) % Check exclusive left turn detectors
-                    
                     % Get the states of left-turn, through, and right-turn
                     % from exclusive left-turn detectors
                     possibleExclusiveLeft.Through=[];
                     possibleExclusiveLeft.Left={'Left Turn','Left Turn Queue'};
                     possibleExclusiveLeft.Right=[];
-                    [exc_left_status,~]=state_estimation.check_aggregate_rate_by_movement_type...
-                        (approach.exclusive_left_turn,possibleExclusiveLeft,approach.decision_making.exclusive_left_turn,'stopline detectors');
+                    [exc_left_status,~,~]=state_estimation.check_aggregate_rate_by_movement_type...
+                        (approach.exclusive_left_turn,possibleExclusiveLeft,decision_making.exclusive_left_turn,'stopline detectors');
                 else
                     exc_left_status=[0, 0, 0];
                 end
@@ -645,8 +689,8 @@ classdef state_estimation
         
         %% *************** Functions to get traffic states and estimate vehicle queues *****************
         
-        function [status,avg_speed]=check_aggregate_rate_by_movement_type(movement, possibleMovement, decision_making,type)
-            % This function is to get the aggreagated rate by movement (left-turn, through, and right-turn) and
+        function [status,avg_speed,avg_occ]=check_aggregate_rate_by_movement_type(movement, possibleMovement, decision_making,type)
+            % This function is to get the aggreagated rate, speed, and occ by movement (left-turn, through, and right-turn) and
             % type of detectors (exclusive left, exclusive right, general stopline, and advanced detectors)
             
             % Check the number of detector types
@@ -659,91 +703,106 @@ classdef state_estimation
             % Check through movements
             rateSum_through=0;   
             speedSum_through=0;  
+            occSum_through=0;
             count_through=0;
-            for i=1:numType
-                idx_through=ismember(movement(i).Movement,possibleThrough);
-                if(sum(idx_through)) % Find the corresponding through movement
+            for i=1:numType % Loop for all types
+                idx_through=ismember(movement(i).Movement,possibleThrough); % Is it a member for the through movement?
+                if(sum(idx_through)) % If yes, get the corresponding rate information (row vector)
                     rates=decision_making.rates(i,:);
-                    rateNum=state_estimation.convert_rate_to_num(rates',type);                    
+                    rateNum=state_estimation.convert_rate_to_num(rates,type);                    
                     speeds=decision_making.speeds(i,:);
+                    occs=decision_making.occupancies(i,:);
                     
-                    for j=1:size(rateNum,1) % Loop for all detectors with the same type
+                    for j=1:size(rateNum,2) % Loop for all detectors with the same type (all columns)
                         if(rateNum(j)>0) % Have availalbe states
                             count_through=count_through+1;
                             rateSum_through=rateSum_through+rateNum(j);
                             speedSum_through=speedSum_through+speeds(j);
+                            occSum_through=occSum_through+occs(j);
                         end
                     end
                 end
             end
-            if(count_through)
+            if(count_through) % If not zero, take the means
                 rateMean_through=rateSum_through/count_through;
-                speedSum_through=speedSum_through/count_through;
-            else
+                speedMean_through=speedSum_through/count_through;
+                occMean_through=occSum_through/count_through;
+            else % Else, set to be zeros
                 rateMean_through=0;
-                speedSum_through=0;
+                speedMean_through=0;
+                occMean_through=0;
             end
             
             % Check left-turn movements
             rateSum_left=0;
             speedSum_left=0;
+            occSum_left=0;
             count_left=0;
             for i=1:numType
                 idx_left=ismember(movement(i).Movement,possibleLeft);
                 if(sum(idx_left)) % Find the corresponding left-turn movement
                     rates=decision_making.rates(i,:);
-                    rateNum=state_estimation.convert_rate_to_num(rates',type);
+                    rateNum=state_estimation.convert_rate_to_num(rates,type);
                     speeds=decision_making.speeds(i,:);
+                    occs=decision_making.occupancies(i,:);
                     
-                    for j=1:size(rateNum,1) % Loop for all detectors with the same type
+                    for j=1:size(rateNum,2) % Loop for all detectors with the same type
                         if(rateNum(j)>0) % Have availalbe states
                             count_left=count_left+1;
                             rateSum_left=rateSum_left+rateNum(j);
                             speedSum_left=speedSum_left+speeds(j);
+                            occSum_left=occSum_left+occs(j);
                         end
                     end
                 end
             end
-            if(count_left)
+            if(count_left) % If not zero, take the means
                 rateMean_left=rateSum_left/count_left;
-                speedSum_left=speedSum_left/count_through;
-            else
+                speedMean_left=speedSum_left/count_left;
+                occMean_left=occSum_left/count_left;
+            else % Else, set to be zeros
                 rateMean_left=0;
-                speedSum_left=0;
+                speedMean_left=0;
+                occMean_left=0;
             end
-            
             
             % Check right-turn movements
             rateSum_right=0;
             speedSum_right=0;
+            occSum_right=0;
             count_right=0;
             for i=1:numType
                 idx_right=ismember(movement(i).Movement,possibleRight);
                 if(sum(idx_right)) % Find the corresponding right-turn movement
                     rates=decision_making.rates(i,:);
-                    rateNum=state_estimation.convert_rate_to_num(rates',type);
+                    rateNum=state_estimation.convert_rate_to_num(rates,type);
                     speeds=decision_making.speeds(i,:);
+                    occs=decision_making.occupancies(i,:);
                     
-                    for j=1:size(rateNum,1) % Loop for all detectors with the same type
+                    for j=1:size(rateNum,2) % Loop for all detectors with the same type
                         if(rateNum(j)>0) % Have availalbe states
                             count_right=count_right+1;
                             rateSum_right=rateSum_right+rateNum(j);
                             speedSum_right=speedSum_right+speeds(j);
+                            occSum_right=occSum_right+occs(j);
                         end
                     end
                 end
             end
-            if(count_right)
+            if(count_right) % If not zero, take the means
                 rateMean_right=rateSum_right/count_right;
-                speedSum_right=speedSum_right/count_through;
-            else
+                speedMean_right=speedSum_right/count_right;
+                occMean_right=occSum_right/count_right;
+            else % Else, set to be zeros
                 rateMean_right=0;
-                speedSum_right=0;
+                speedMean_right=0;
+                occMean_right=0;
             end
             
             % Return mean values for different movements
             status=[rateMean_left, rateMean_through, rateMean_right];
-            avg_speed=[speedSum_left,speedSum_through,speedSum_right];
+            avg_speed=[speedMean_left,speedMean_through,speedMean_right];
+            avg_occ=[occMean_left,occMean_through,occMean_right];
         end
         
         function [queue_threshold]=calculation_of_queue_thresholds(approach,default_proportions,params)
@@ -1052,6 +1111,10 @@ classdef state_estimation
         end
         
         function [proportion]=find_traffic_proportion(detectorMovement,default_proportion,movement)
+            % This function is to find the default proportion for a certain
+            % movement through a given type of detector
+            
+            % Get the index
             switch movement
                 case 'Left'
                     idx=1;
@@ -1063,6 +1126,7 @@ classdef state_estimation
                     error('Wrong input of traffic movement!')
             end
             
+            % Find the corresponding proportion
             switch detectorMovement
                 case 'Left Turn'
                     proportion=default_proportion.Left_Turn(idx);
@@ -1115,8 +1179,7 @@ classdef state_estimation
         
         function [rateNum]=convert_rate_to_num(rates,type)
             % This function is to convert a rate to its corresponding
-            % number
-            
+            % number            
             rateNum=zeros(size(rates));
             
             switch type
@@ -1206,8 +1269,8 @@ classdef state_estimation
                     'endTime', data.time(end),...                       % End time
                     'avgFlow', mean(data.s_volume,'omitnan'),...                  % Average flow
                     'avgOccupancy', mean(data.s_occupancy,'omitnan')/3600,...     % Average occupancy
-                    'medFlow', median(data.s_volume,'omitnan'),...                % Median of flow
-                    'medOccupancy', median(data.s_occupancy,'omitnan')/3600,...   % Median of occupancy
+                    'medFlow', median(data.s_volume,'omitnan'),...                % Median flow
+                    'medOccupancy', median(data.s_occupancy,'omitnan')/3600,...   % Median occupancy
                     'maxFlow', max(data.s_volume),...                   % Maximum value of flow
                     'maxOccupancy', max(data.s_occupancy)/3600,...      % Maximum value of occupancy
                     'minFlow', min(data.s_volume),...                   % Minimum value of flow
@@ -1217,30 +1280,41 @@ classdef state_estimation
         
         
         %% *************** Functions to extract estimation performance *****************
-        function extract_to_excel(appStateEst,outputFolder,outputFileName)
+        function extract_to_excel(appStateEst,outputFolder,outputFileName,outputSheetName)
             % This function is extract the state estimation results to an
             % excel file
             
             outputFileName=fullfile(outputFolder,outputFileName);
             
-            xlswrite(outputFileName,[{'Intersection Name'},{'Road Name'},{'Direction'},...
+            xlswrite(outputFileName,[{'Intersection Name'},{'Road Name'},{'Direction'},{'Time'}...
                 {'Left Turn Status'},{'Through movement Status'},{'Right Turn Status'},...
-                {'Left Turn Queue'},{'Through movement Queue'},{'Right Turn Queue'}]);
+                {'Left Turn Queue'},{'Through movement Queue'},{'Right Turn Queue'}],outputSheetName);
             
-            % Write intersection and detector information
+            % Write intersection and detector information  
+            int_name=[];
+            road_name=[];
+            direction=[];
+            for i=1:size(appStateEst,1)
+                int_name=[int_name;repmat({appStateEst(i).intersection_name},size(appStateEst(i).decision_making,1),1)];
+                road_name=[road_name;repmat({appStateEst(i).road_name},size(appStateEst(i).decision_making,1),1)];
+                direction=[direction;repmat({appStateEst(i).direction},size(appStateEst(i).decision_making,1),1)];
+            end
+            
             data=vertcat(appStateEst.decision_making);
+            time=vertcat({data.time})';
             assessment=vertcat(data.status_assessment);
             left_turn=[assessment.left_turn]';
             through=([assessment.through])';
             right_turn=([assessment.right_turn])';
             
             xlswrite(outputFileName,[...
-                {appStateEst.intersection_name}',...
-                {appStateEst.road_name}',...
-                {appStateEst.direction}',...
+                int_name,...
+                road_name,...
+                direction,...
+                time,...
                 left_turn,...
                 through,...
-                right_turn],sprintf('A2:F%d',length(left_turn)+1));
+                right_turn],outputSheetName,sprintf('A2:G%d',length(left_turn)+1));
             
             queue=vertcat(data.queue_assessment);
             left_turn_queue=ceil([queue.left_turn]');
@@ -1250,7 +1324,7 @@ classdef state_estimation
             xlswrite(outputFileName,[...
                 left_turn_queue,...
                 through_queue,...
-                right_turn_queue],sprintf('G2:I%d',length(left_turn_queue)+1));
+                right_turn_queue],outputSheetName,sprintf('H2:J%d',length(left_turn_queue)+1));
             
             
         end

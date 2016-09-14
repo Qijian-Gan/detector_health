@@ -1,15 +1,16 @@
 classdef health_analysis
     properties
-        data            % The input data
+        data                    % The input data
         
-        interval        % Time interval of the data samples
-        threshold       % Threshold to identify significant breakpoints
-        criteria_good   % Criteria to say a detector is good
+        interval                % Time interval of the data samples
+        threshold               % Threshold to identify significant breakpoints
+        MaxLengthZeroValues     % Maximum length of all zero values
+        criteria_good           % Criteria to say a detector is good
         
-        cases           % Combinations of {detector ID, year, month, day} inside the data file
-        numCases        % Number of combinations
+        cases                   % Combinations of {detector ID, year, month, day} inside the data file
+        numCases                % Number of combinations
         
-        measures        % Measures of the data quality
+        measures                % Measures of the data quality
         
     end
     
@@ -22,6 +23,7 @@ classdef health_analysis
             % Get the params
             this.interval=params.timeInterval;
             this.threshold=params.threshold;
+            this.MaxLengthZeroValues=params.MaxLengthZeroValues;
             this.criteria_good=params.criteria_good;
             
             % Get the number of cases in the data file
@@ -69,7 +71,7 @@ classdef health_analysis
                 
                 % Fourth check whether the detector is reporting zeros
                 % during day time: from 7AM to 10PM
-                metrics.ZeroValues=health_analysis.check_zero_values(tmpData);
+                metrics.ZeroValues=health_analysis.check_zero_values(tmpData,this.interval,this.MaxLengthZeroValues);
 
                 % Provide the rating: good/bad
                 metrics.Health=this.identification_good_or_bad(metrics);
@@ -159,8 +161,8 @@ classdef health_analysis
             data_with_zero=data(idx,:);
             clear idx
             
-            % Excluse those with occ=0, flow=0, speed=0
-            % Excluse those with occ!=, flow=0, speed=0
+            % Excluse those with occ=0, flow=0, speed=0: empty road
+            % Excluse those with occ!=, flow=0, speed=0: totally stop
             idx=(data_with_zero(:,6)==0 & data_with_zero(:,8)==0);
             data_with_zero(idx,:)=[];
             
@@ -169,32 +171,60 @@ classdef health_analysis
             
         end
         
-        function [rate]=check_zero_values(data)
+        function [rate]=check_zero_values(data,interval,MaxLengthZeroValues)
             % This function is to check whether the system keeps reporting
             % zero values. But this criterion only apply to the time period
             % from 7:00AM to 10:00PM
             
-            idx1=(data(:,5)>=7*3600); % Greater than 7:00AM
-            idx2=(data(:,5)<22*3600); % Less than 10:00PM
-            idx=(idx1+idx2==2);
+            % Selected data from 7:00AM to 10:00PM
+            % ****Old code ****
+            %             idx1=(data(:,5)>=7*3600); % Greater than 7:00AM
+            %             idx2=(data(:,5)<22*3600); % Less than 10:00PM
+            %             idx=(idx1+idx2==2);
+            %             tmpData=data(idx,:); % Get that data
+            
+            idx=(data(:,5)>=7*3600 & data(:,5)<22*3600);
             tmpData=data(idx,:); % Get that data
+            clear idx
             
-            % Exclusive those with one or two varialbes (flow, occ, speed) with zero values  
-            % Only those with non-zero values or all zero values left
-            idx=(sum((tmpData(:,6:8)==0),2)>0 & sum((tmpData(:,6:8)==0),2)<3);            
-            tmpData=(tmpData(idx==0,:));
+            % Find index of zero values
+            idx=(sum((tmpData(:,6:8)==0),2)==3);  % 1: all zeros, 0: not all zeros          
             
-            % Get the sums of flow, occ, and speed
-            sumFlow=sum(tmpData(:,6));
-            sumOcc=sum(tmpData(:,7));
-            sumSpeed=sum(tmpData(:,8));
+            % Find whether the detector keeps reporting zero values for
+            % more than MaxLengthZeroValues hours
+            rate=0;
+            max_missing_length=MaxLengthZeroValues*3600/interval;
+            cur_missing_length=0;
+            for i=1:length(idx) % Loop for the whole index
+                if(idx(i)==1) % For current step, if all zero values
+                    cur_missing_length=cur_missing_length+1; % Add one
+                else % If not
+                    cur_missing_length=0; % Reset
+                end
+                
+                % Check the criterion
+                if(cur_missing_length>=max_missing_length)
+                    rate=1;
+                    break;
+                end
+            end
             
-            % If all sums are zeros, then say it is reporting zero values
-            if(sumFlow==0 && sumOcc==0 && sumSpeed==0)
-                rate=1;
-            else
-                rate=0;
-            end          
+            % ****Old code ****
+            %             % Exclude those with one or two varialbes (flow, occ, speed) with zero values
+            %             % Only those with non-zero values or all zero values left
+            %             idx=(sum((tmpData(:,6:8)==0),2)>0 & sum((tmpData(:,6:8)==0),2)<3);
+            %             tmpData=(tmpData(idx==0,:)); % For each row: either all zeros or non-zero values
+            %
+            %             % First check: Get the sums of flow, occ, and speed
+            %             sumFlow=sum(tmpData(:,6));
+            %             sumOcc=sum(tmpData(:,7));
+            %             sumSpeed=sum(tmpData(:,8));
+            %             % If all sums are zeros, then say it is reporting zero values
+            %             if(sumFlow==0 && sumOcc==0 && sumSpeed==0)
+            %                 rate=1;
+            %             else
+            %                 rate=0;
+            %             end
             
         end
         

@@ -1,7 +1,7 @@
 classdef load_config
     properties
-        fileLocation        % Location of the detector config file
-        fileName            % Name of the detector config file
+        fileLocation        % Location of the config file
+        fileName            % Name of the config file
         
         detectorConfig      % Detector config
         linkConfig          % Link config
@@ -12,46 +12,50 @@ classdef load_config
     methods ( Access = public )
         
         function [this]=load_config(name, location)
-            % This function is to load the detector config file
+            %% This function is to load the config files
             
-            if nargin>1
+            this.fileName = name; % Get the file name
+            if nargin>1 % Has location input
                 this.fileLocation=location;
             else
-                % Default location for the network configuration file
+                % Use default location
                 this.fileLocation=findFolder.config;
-            end
-            
-            this.fileName = name;
+            end        
         end
         
         function [tmpConfig]=detector_property(this,subFileName)
             % This function is used to read detector properties
-            
+
             file = fullfile(this.fileLocation,this.fileName);
             
+            % The file format is excel
             [num,txt,raw]=xlsread(file,subFileName);
+            % num stores all the numbers
+            % txt stores all the text information
             
-            numDetector=size(num,1);
+            numDetector=size(num,1); % Get the number of detectors in the subfile
             
+            % Create a structural matrix to store the data
             tmpConfig=repmat(struct(...
-                'IntersectionName',     nan,...
-                'IntersectionID',       nan,...
-                'County',               nan,...
-                'City',                 nan,...
-                'RoadName',             nan,...
-                'Direction',            nan,...
-                'SensorID',             nan,...
-                'Movement',             nan,...
-                'Status',               nan,...
-                'DetourRoute',          nan,...
-                'DetectorLength',       nan,...
-                'DistanceToStopbar',    nan,...
-                'NumberOfLanes',        nan,...
-                'LeftTurnPocket',       nan,...
-                'RightTurnPocket',      nan),numDetector,1);
+                'IntersectionName',     nan,... % String
+                'IntersectionID',       nan,... % Number
+                'County',               nan,... % String
+                'City',                 nan,... % String
+                'RoadName',             nan,... % String
+                'Direction',            nan,... % String
+                'SensorID',             nan,... % Number
+                'Movement',             nan,... % String
+                'Status',               nan,... % String
+                'DetourRoute',          nan,... % String
+                'DetectorLength',       nan,... % Number
+                'DistanceToStopbar',    nan,... % Number
+                'NumberOfLanes',        nan,... % Number
+                'LeftTurnPocket',       nan,... % Number
+                'RightTurnPocket',      nan),numDetector,1); % Number
             
             [~,col]=size(num);
             for i=1:numDetector
+                % Get the numbers
                 tmpConfig(i).IntersectionID=num(i,1);
                 tmpConfig(i).SensorID=num(i,6);
                 if(col>=10)
@@ -70,6 +74,7 @@ classdef load_config
                     tmpConfig(i).RightTurnPocket=num(i,14);
                 end
                 
+                % Get the strings
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
                 tmpConfig(i).City=char(txt(i+1,4));
@@ -87,24 +92,28 @@ classdef load_config
             
             file = fullfile(this.fileLocation,this.fileName);            
             
+            % The file format is excel
             [num,txt,raw]=xlsread(file,subFileName);
+            % num stores all the numbers
+            % txt stores all the text information
             
-            numApproach=size(num,1);
+            numApproach=size(num,1); % Get the number of approaches
             
             tmpConfig=repmat(struct(...
-                'IntersectionName',     nan,...
-                'IntersectionID',       nan,...
-                'County',               nan,...
-                'City',                 nan,...
-                'RoadName',             nan,...
-                'Direction',            nan,...
-                'LinkLength',           nan,...
-                'NumberOfLanes',        nan,...
-                'Capacity',             nan,...
-                'MaxSpeed',             nan),numApproach,1);
+                'IntersectionName',     nan,... % String
+                'IntersectionID',       nan,... % Number
+                'County',               nan,... % String
+                'City',                 nan,... % String
+                'RoadName',             nan,... % String
+                'Direction',            nan,... % String
+                'LinkLength',           nan,... % Number
+                'NumberOfLanes',        nan,... % Number
+                'Capacity',             nan,... % Number
+                'MaxSpeed',             nan),numApproach,1); % Number
             
             [~,col]=size(num);
             for i=1:numApproach
+                % Get all the numbers
                 tmpConfig(i).IntersectionID=num(i,1);
                 if(col>=6)
                     tmpConfig(i).LinkLength=num(i,6);
@@ -119,6 +128,7 @@ classdef load_config
                     tmpConfig(i).MaxSpeed=num(i,9);
                 end
                 
+                % Get all the strings
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
                 tmpConfig(i).City=char(txt(i+1,4));
@@ -133,25 +143,29 @@ classdef load_config
             
             file = fullfile(this.fileLocation,this.fileName);
             
+            % The file format is excel
             [num,txt,raw]=xlsread(file,subFileName);
+            % num stores all the numbers
+            % txt stores all the text information
             
-            numApproach=size(num,1);
+            numApproach=size(num,1); % Get the number of approaches
             
             tmpConfig=repmat(struct(...
-                'IntersectionName',     nan,...
-                'IntersectionID',       nan,...
-                'County',               nan,...
-                'City',                 nan,...
-                'RoadName',             nan,...
-                'Direction',            nan,...
-                'CycleLength',          nan,...
-                'LeftTurnGreen',        nan,...
-                'ThroughGreen',         nan,...
-                'RightTurnGreen',       nan,...
-                'LeftTurnSetting',      nan),numApproach,1);
+                'IntersectionName',     nan,... % String
+                'IntersectionID',       nan,... % Number
+                'County',               nan,... % String 
+                'City',                 nan,... % String
+                'RoadName',             nan,... % String
+                'Direction',            nan,... % String
+                'CycleLength',          nan,... % Number
+                'LeftTurnGreen',        nan,... % Number
+                'ThroughGreen',         nan,... % Number
+                'RightTurnGreen',       nan,... % Number
+                'LeftTurnSetting',      nan),numApproach,1); % String
             
             [~,col]=size(num);
             for i=1:numApproach
+                % Get all numbers
                 tmpConfig(i).IntersectionID=num(i,1);
                 if(col>=6)
                     tmpConfig(i).CycleLength=num(i,6);
@@ -166,6 +180,7 @@ classdef load_config
                     tmpConfig(i).RightTurnGreen=num(i,9);
                 end
                 
+                % Get all strings
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
                 tmpConfig(i).City=char(txt(i+1,4));
@@ -177,28 +192,35 @@ classdef load_config
         
         function [tmpConfig]=midlink_config(this,subFileName)
             % This function is used to read the configuration of midlink
-            % counts
+            % counts. Need to use this config file since the location of the
+            % midlink count is not at the corresponding
+            % approach/intersection.
             
             file = fullfile(this.fileLocation,this.fileName);
             
+            % The file format is excel
             [num,txt,raw]=xlsread(file,subFileName);
+            % num stores all the numbers
+            % txt stores all the text information
             
             numApproach=size(num,1);
             
             tmpConfig=repmat(struct(...
-                'IntersectionName',     nan,...
-                'IntersectionID',       nan,...
-                'County',               nan,...
-                'City',                 nan,...
-                'RoadName',             nan,...
-                'Direction',            nan,...
-                'Location',             nan,...
-                'Approach',             nan),numApproach,1);
+                'IntersectionName',     nan,... % String
+                'IntersectionID',       nan,... % Number
+                'County',               nan,... % String
+                'City',                 nan,... % String
+                'RoadName',             nan,... % String
+                'Direction',            nan,... % String
+                'Location',             nan,... % String
+                'Approach',             nan),numApproach,1); % String
             
             [~,col]=size(num);
             for i=1:numApproach
+                % Get all numbers
                 tmpConfig(i).IntersectionID=num(i,1);
-                                
+                
+                % Get all strings
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
                 tmpConfig(i).City=char(txt(i+1,4));
@@ -208,9 +230,7 @@ classdef load_config
                 tmpConfig(i).Approach=char(txt(i+1,8));
             end
         end
-        
-        
-        
+
     end
     
 end

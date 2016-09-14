@@ -24,7 +24,7 @@ ptr_turningCount=turning_count_provider;
 
 evl=data_evaluation(appConfig.approachConfig,ptr_sensor,ptr_midlink,ptr_turningCount);
 appDataEvl=[];
-for i=5:size(appConfig.approachConfig,1)
+for i=1:size(appConfig.approachConfig,1)
     % For approach
     [approach]=evl.get_turning_count_for_approach(appConfig.approachConfig(i));
     [approach]=evl.get_midlink_data_for_approach(approach);
@@ -51,6 +51,7 @@ for i=5:size(appConfig.approachConfig,1)
     appDataEvl=[appDataEvl;approach];
 end
 
+save(fullfile(ptr_sensor.outputFolderLocation,'Scaled_data_test.mat'),'appDataEvl');
 
 
 

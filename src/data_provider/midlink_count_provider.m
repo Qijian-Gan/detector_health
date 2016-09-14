@@ -8,7 +8,7 @@ classdef midlink_count_provider
     methods ( Access = public )
 
         function [this]=midlink_count_provider(inputFolderLocation)
-            % This function is to obtain the midblock counts
+            %% This function is to obtain the midblock counts
             
             % Obtain inputs
             if nargin==0 % Default input folder

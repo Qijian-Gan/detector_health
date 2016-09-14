@@ -16,7 +16,7 @@ else
 end
 
 % Load the detector data and get the list of files that is needed to be updated
-% dp=load_detector_data('D:\I210_Arcadia\2016');
+% dp=load_detector_data('E:\Arcadia_data\2016');
 dp=load_detector_data; % With empty input: Default folder ('data')
 fileList=dp.obtain_file_list(dp.folderLocation); % Get the list of detector files
 
@@ -25,10 +25,12 @@ fileList=dp.obtain_file_list(dp.folderLocation); % Get the list of detector file
 params=struct(...
     'timeInterval',             300,...      % Five-minute data, default
     'threshold',                200,...      % Threshold for break points: difference in percentage
+    'MaxLengthZeroValues',      4,...        % Maximum length of all zero values: 4 hours 
     'criteria_good',            struct(...   % Criteria to say a detector is good
         'MissingRate',         5,...  % Percentage
         'InconsistencyRate',   15,... % Percentage
-        'BreakPoints',         40));  % # of break points
+        'BreakPoints',         40 ... % # of break points
+        ));    
 
 % Health analysis
 numFile=size(fileList,1);
@@ -37,7 +39,7 @@ health_report(1)=[];
 
 tmpList=[];
 for i=1:numFile
-    
+    i
     if(isempty(fileRead) || ~any(strcmp({fileList(i).name},fileRead))) % Empty or Not yet read
         
         % Parse data

@@ -13,25 +13,23 @@ classdef sensor_count_provider
     methods ( Access = public )
 
         function [this]=sensor_count_provider(inputFolderLocation, outputFolderLocation,listOfDetectors, queryMeasures)
-            % This function is to obtain the sensor data
+            %% This function is to obtain the sensor data
             
-            % Obtain inputs
-            if nargin==0 % Default input and output folders
-                this.inputFolderLocation=findFolder.temp;
-                this.outputFolderLocation=findFolder.outputs;
-            else
-                if(nargin>=1)
-                    this.inputFolderLocation=inputFolderLocation; % Get the input folder
-                elseif(nargin>=2)
-                    this.outputFolderLocation=outputFolderLocation; % Get the output folder
-                elseif(nargin>=3) 
-                    this.listOfDetectors=listOfDetectors; % Get the list detectors
-                elseif(nargin==4)
-                    this.queryMeasures=queryMeasures; % Get the query measures
-                elseif(nargin>4)
-                    error('Too many inputs!')
-                end                    
-            end             
+            % First, set default input and output folders
+            this.inputFolderLocation=findFolder.temp;
+            this.outputFolderLocation=findFolder.outputs;
+            
+            if(nargin>=1)
+                this.inputFolderLocation=inputFolderLocation; % Get the input folder
+            elseif(nargin>=2)
+                this.outputFolderLocation=outputFolderLocation; % Get the output folder
+            elseif(nargin>=3)
+                this.listOfDetectors=listOfDetectors; % Get the list detectors
+            elseif(nargin==4)
+                this.queryMeasures=queryMeasures; % Get the query measures
+            elseif(nargin>4)
+                error('Too many inputs!')
+            end
         end
          
         function [data_out]=get_data_for_a_date(this,listOfDetectors, queryMeasures)
