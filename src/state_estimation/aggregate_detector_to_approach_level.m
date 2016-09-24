@@ -65,10 +65,15 @@ classdef aggregate_detector_to_approach_level
                     int_app_dir_pair(i,1:3),'rows'),2)==3);
                 if(sum(idx))
                     link_properties=struct(...
-                        'LinkLength',            this.linkConfig(idx).LinkLength,...
-                        'NumberOfLanes',         this.linkConfig(idx).NumberOfLanes,...
-                        'Capacity',              this.linkConfig(idx).Capacity,...
-                        'MaxSpeed',              this.linkConfig(idx).MaxSpeed);
+                        'LinkLength',                       this.linkConfig(idx).LinkLength,...
+                        'NumberOfLanes',                    this.linkConfig(idx).NumberOfLanes,...
+                        'NumberOfLanesDownstream',          this.linkConfig(idx).NumberOfLanesDownstream,...
+                        'ExclusiveLeftTurnLane',            this.linkConfig(idx).ExclusiveLeftTurnLane,...              
+                        'LeftTurnPocket',                   this.linkConfig(idx).LeftTurnPocket,...
+                        'ExclusiveRightTurnLane',           this.linkConfig(idx).ExclusiveRightTurnLane,...
+                        'RightTurnPocket',                  this.linkConfig(idx).RightTurnPocket,...
+                        'Capacity',                         this.linkConfig(idx).Capacity,...
+                        'MaxSpeed',                         this.linkConfig(idx).MaxSpeed);
                 else
                     link_properties=[];
                 end
@@ -135,16 +140,15 @@ classdef aggregate_detector_to_approach_level
 
                 if(sum(idx)>0) % Has detectors belonging to the current type?
                     tmp_data=data(idx,:);
-                    [tmpID,distanceToStopbar,detectorLength,numberOfLanes,leftTurnPocket,rightTurnPocket]=...
+                    [tmpID,distanceToStopbar,detectorLength,numberOfLanes]=...
                         aggregate_detector_to_approach_level.get_detector_ids(tmp_data);
                     detectorList=[detectorList;struct(...
                         'Movement',                     possibleMovements(i),...    % Movement Type
                         'IDs',                          tmpID,...                   % Detector IDs belonging to the same movement type
                         'DetectorLength',               detectorLength,...          % Length of the detector
                         'DistanceToStopbar',            distanceToStopbar,...       % Distance to Stopbar
-                        'NumberOfLanes',                numberOfLanes,...           % Number of lanes
-                        'LeftTurnPocket',               leftTurnPocket,...          % Left-turn pocket
-                        'RightTurnPocket',              rightTurnPocket)];          % Right-turn pocket
+                        'NumberOfLanes',                numberOfLanes...           % Number of lanes
+                        )];          % Right-turn pocket
                 end
             end
         end
@@ -169,7 +173,7 @@ classdef aggregate_detector_to_approach_level
             end
         end
         
-        function [detectorIDs, distanceToStopbar,detectorLength,numberOfLanes,leftTurnPocket,rightTurnPocket]=get_detector_ids(data)
+        function [detectorIDs, distanceToStopbar,detectorLength,numberOfLanes]=get_detector_ids(data)
             % This function returns detector IDs and their distances to the
             % stopbar
             
@@ -177,8 +181,6 @@ classdef aggregate_detector_to_approach_level
             distanceToStopbar=[];
             detectorLength=[];
             numberOfLanes=[];
-            leftTurnPocket=[];
-            rightTurnPocket=[];
             for i=1:size(data,1)
                 if(data(i).SensorID<10)
                     detectorID=sprintf('%d0%d',data(i).IntersectionID,data(i).SensorID);
@@ -189,8 +191,6 @@ classdef aggregate_detector_to_approach_level
                 distanceToStopbar=[distanceToStopbar;data(i).DistanceToStopbar];
                 detectorLength=[detectorLength;data(i).DetectorLength];
                 numberOfLanes=[numberOfLanes;data(i).NumberOfLanes];
-                leftTurnPocket=[leftTurnPocket;data(i).LeftTurnPocket];
-                rightTurnPocket=[rightTurnPocket;data(i).RightTurnPocket];
             end
         end
         

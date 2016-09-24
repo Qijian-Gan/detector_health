@@ -22,17 +22,17 @@ ptr_turningCount=turning_count_provider;
 
 days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'}; 
 from=6*3600; % Starting time
-to=7*3600;  % Ending time
+to=22*3600;  % Ending time
 interval=300;
 
 %% Run state estimation
 est=state_estimation(appConfig.approachConfig,ptr_sensor,ptr_midlink,ptr_turningCount);
 folderLocation=findFolder.reports;
 fileName='state_estimation_result.xlsx';
-for day=8:8 % Weekday and weekend
+for day=8:9 % Weekday and weekend
     appStateEst=[];    
     for i=1:size(appConfig.approachConfig,1) % Loop for all approaches  
-        for t=from:interval:to % Loop for all prediction intervals
+        for t=from:22*interval:to % Loop for all prediction intervals
             queryMeasures=struct(...
                 'year',     nan,...
                 'month',    nan,...
@@ -42,7 +42,7 @@ for day=8:8 % Weekday and weekend
                 'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
 
             tmp_approach=appConfig.approachConfig(i);
-            [tmp_approach.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
+            [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
             [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
             [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
             if (t==from)

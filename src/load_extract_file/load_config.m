@@ -49,9 +49,8 @@ classdef load_config
                 'DetourRoute',          nan,... % String
                 'DetectorLength',       nan,... % Number
                 'DistanceToStopbar',    nan,... % Number
-                'NumberOfLanes',        nan,... % Number
-                'LeftTurnPocket',       nan,... % Number
-                'RightTurnPocket',      nan),numDetector,1); % Number
+                'NumberOfLanes',        nan...  % Number
+                ),numDetector,1); % Number
             
             [~,col]=size(num);
             for i=1:numDetector
@@ -67,13 +66,7 @@ classdef load_config
                 if(col>=12)
                     tmpConfig(i).NumberOfLanes=num(i,12);
                 end
-                if(col>=13)
-                    tmpConfig(i).LeftTurnPocket=num(i,13);
-                end
-                if(col>=14)
-                    tmpConfig(i).RightTurnPocket=num(i,14);
-                end
-                
+                                
                 % Get the strings
                 tmpConfig(i).IntersectionName=char(txt(i+1,1));
                 tmpConfig(i).County=char(txt(i+1,3));
@@ -100,16 +93,21 @@ classdef load_config
             numApproach=size(num,1); % Get the number of approaches
             
             tmpConfig=repmat(struct(...
-                'IntersectionName',     nan,... % String
-                'IntersectionID',       nan,... % Number
-                'County',               nan,... % String
-                'City',                 nan,... % String
-                'RoadName',             nan,... % String
-                'Direction',            nan,... % String
-                'LinkLength',           nan,... % Number
-                'NumberOfLanes',        nan,... % Number
-                'Capacity',             nan,... % Number
-                'MaxSpeed',             nan),numApproach,1); % Number
+                'IntersectionName',         nan,... % String
+                'IntersectionID',           nan,... % Number
+                'County',                   nan,... % String
+                'City',                     nan,... % String
+                'RoadName',                 nan,... % String
+                'Direction',                nan,... % String
+                'LinkLength',               nan,... % Number
+                'NumberOfLanes',            nan,... % Number
+                'NumberOfLanesDownstream',  nan,... % Number
+                'ExclusiveLeftTurnLane',    nan,... % Number
+                'LeftTurnPocket',           nan,... % Number
+                'ExclusiveRightTurnLane',   nan,... %Number
+                'RightTurnPocket',          nan, ...% Number
+                'Capacity',                 nan,... % Number
+                'MaxSpeed',                 nan),numApproach,1); % Number
             
             [~,col]=size(num);
             for i=1:numApproach
@@ -122,10 +120,25 @@ classdef load_config
                     tmpConfig(i).NumberOfLanes=num(i,7);
                 end
                 if(col>=8)
-                    tmpConfig(i).Capacity=num(i,8);
+                    tmpConfig(i).NumberOfLanesDownstream=num(i,8);
                 end
                 if(col>=9)
-                    tmpConfig(i).MaxSpeed=num(i,9);
+                    tmpConfig(i).ExclusiveLeftTurnLane=num(i,9);
+                end
+                if(col>=10)
+                    tmpConfig(i).LeftTurnPocket=num(i,10);
+                end
+                if(col>=11)
+                    tmpConfig(i).ExclusiveRightTurnLane=num(i,11);
+                end
+                if(col>=12)
+                    tmpConfig(i).RightTurnPocket=num(i,12);
+                end
+                if(col>=13)
+                    tmpConfig(i).Capacity=num(i,13);
+                end
+                if(col>=14)
+                    tmpConfig(i).MaxSpeed=num(i,14);
                 end
                 
                 % Get all the strings
