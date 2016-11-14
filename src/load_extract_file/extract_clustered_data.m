@@ -30,7 +30,7 @@ classdef extract_clustered_data
         function extract_to_aimsun_by_day_of_week(this,daynum)
             % This function is to extract to aimsun
             
-            day={'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'};
+            day={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
             
             inputFileName=fullfile(this.inputFolderLocation,sprintf('Clustered_data_%s.mat',day{daynum}));
             outputFileName=fullfile(this.inputFolderLocation,sprintf('Aimsun_data_%s.csv',day{daynum}));

@@ -31,6 +31,10 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\bluetooth');
         end
         
+        function [x] = simVehicle_data()
+            x = fullfile(findFolder.root,'data\simVehData');
+        end
+        
         function [x] = config()
             x = fullfile(findFolder.root,'config');
         end

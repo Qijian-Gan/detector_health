@@ -334,11 +334,11 @@ classdef state_estimation
                         approach_in.exclusive_left_turn(i).Movement,'exclusive_left_turn');
                     
                     decision_making.exclusive_left_turn.rates=...
-                        [decision_making.exclusive_left_turn.rates;rates];
+                        [decision_making.exclusive_left_turn.rates;{rates}];
                     decision_making.exclusive_left_turn.speeds=...
-                        [decision_making.exclusive_left_turn.speeds;speeds];
+                        [decision_making.exclusive_left_turn.speeds;{speeds}];
                     decision_making.exclusive_left_turn.occupancies=...
-                        [decision_making.exclusive_left_turn.occupancies;occupancies];
+                        [decision_making.exclusive_left_turn.occupancies;{occupancies}];
                 end
             end
             
@@ -355,11 +355,11 @@ classdef state_estimation
                         approach_in.exclusive_right_turn(i).Movement,'exclusive_right_turn');
                     
                     decision_making.exclusive_right_turn.rates=...
-                        [decision_making.exclusive_right_turn.rates;rates];
+                        [decision_making.exclusive_right_turn.rates;{rates}];
                     decision_making.exclusive_right_turn.speeds=...
-                        [decision_making.exclusive_right_turn.speeds;speeds];
+                        [decision_making.exclusive_right_turn.speeds;{speeds}];
                     decision_making.exclusive_right_turn.occupancies=...
-                        [decision_making.exclusive_right_turn.occupancies;occupancies];
+                        [decision_making.exclusive_right_turn.occupancies;{occupancies}];
                 end
             end
             
@@ -376,11 +376,11 @@ classdef state_estimation
                         approach_in.advanced_detectors(i).Movement,'advanced_detectors');
                     
                     decision_making.advanced_detectors.rates=...
-                        [decision_making.advanced_detectors.rates;rates];
+                        [decision_making.advanced_detectors.rates;{rates}];
                     decision_making.advanced_detectors.speeds=...
-                        [decision_making.advanced_detectors.speeds;speeds];
+                        [decision_making.advanced_detectors.speeds;{speeds}];
                     decision_making.advanced_detectors.occupancies=...
-                        [decision_making.advanced_detectors.occupancies;occupancies];
+                        [decision_making.advanced_detectors.occupancies;{occupancies}];
                 end
             end
             
@@ -397,11 +397,11 @@ classdef state_estimation
                         approach_in.general_stopline_detectors(i).Movement,'general_stopline_detectors');
                     
                     decision_making.general_stopline_detectors.rates=...
-                        [decision_making.general_stopline_detectors.rates;rates];
+                        [decision_making.general_stopline_detectors.rates;{rates}];
                     decision_making.general_stopline_detectors.speeds=...
-                        [decision_making.general_stopline_detectors.speeds;speeds];
+                        [decision_making.general_stopline_detectors.speeds;{speeds}];
                     decision_making.general_stopline_detectors.occupancies=...
-                        [decision_making.general_stopline_detectors.occupancies;occupancies];
+                        [decision_making.general_stopline_detectors.occupancies;{occupancies}];
                 end
             end
             
@@ -723,10 +723,10 @@ classdef state_estimation
             for i=1:numType % Loop for all types
                 idx_through=ismember(movement(i).Movement,possibleThrough); % Is it a member for the through movement?
                 if(sum(idx_through)) % If yes, get the corresponding rate information (row vector)
-                    rates=decision_making.rates(i,:);
+                    rates=decision_making.rates{i,:};
                     rateNum=state_estimation.convert_rate_to_num(rates,type);                    
-                    speeds=decision_making.speeds(i,:);
-                    occs=decision_making.occupancies(i,:);
+                    speeds=decision_making.speeds{i,:};
+                    occs=decision_making.occupancies{i,:};
                     
                     for j=1:size(rateNum,2) % Loop for all detectors with the same type (all columns)
                         if(rateNum(j)>0) % Have availalbe states
@@ -756,10 +756,10 @@ classdef state_estimation
             for i=1:numType
                 idx_left=ismember(movement(i).Movement,possibleLeft);
                 if(sum(idx_left)) % Find the corresponding left-turn movement
-                    rates=decision_making.rates(i,:);
+                    rates=decision_making.rates{i,:};
                     rateNum=state_estimation.convert_rate_to_num(rates,type);
-                    speeds=decision_making.speeds(i,:);
-                    occs=decision_making.occupancies(i,:);
+                    speeds=decision_making.speeds{i,:};
+                    occs=decision_making.occupancies{i,:};
                     
                     for j=1:size(rateNum,2) % Loop for all detectors with the same type
                         if(rateNum(j)>0) % Have availalbe states
@@ -789,10 +789,10 @@ classdef state_estimation
             for i=1:numType
                 idx_right=ismember(movement(i).Movement,possibleRight);
                 if(sum(idx_right)) % Find the corresponding right-turn movement
-                    rates=decision_making.rates(i,:);
+                    rates=decision_making.rates{i,:};
                     rateNum=state_estimation.convert_rate_to_num(rates,type);
-                    speeds=decision_making.speeds(i,:);
-                    occs=decision_making.occupancies(i,:);
+                    speeds=decision_making.speeds{i,:};
+                    occs=decision_making.occupancies{i,:};
                     
                     for j=1:size(rateNum,2) % Loop for all detectors with the same type
                         if(rateNum(j)>0) % Have availalbe states
@@ -1005,29 +1005,35 @@ classdef state_estimation
             
             % Check the existence of lane blockage by other movements
             % Rates for advanced detectors: 0(no data), 1(low occupancy), 2(high occupancy)
+            % Thresholds considering the averages from multiple detectors: [<1.5], [>=1.5]
+            
             % Rates for stopline detectors: 0(no data), 1(under saturated), 2(over saturated with high flow)
             % 3(over saturated with low flow)
+            % Thresholds considering the averages from multiple detectors:
+            % [<1.5], [1.5<=, <2.5], [>= 2.5]
+            
             blockage=[0,0,0];
             % Check left turn and adjacent movements
-            if(downstream_status_left==3 && advanced_status_left==2) % Left turn congested
+            if(downstream_status_left>=2.5 && advanced_status_left>=1.5) % Left turn congested
                 % Through is blocked: advanced congestion, stopline uncongested
-                if(advanced_status_through==2 && downstream_status_through==1) 
+                if(advanced_status_through>=1.5 && downstream_status_through<1.5) 
                     blockage(1)=1; % Left-turn blockage
                 end
             end
-            % Check through and adjacent movements
-            if(downstream_status_through==3 && advanced_status_through==2) % Through congested
-                if((downstream_status_right==1 && advanced_status_right==2)||...
-                        (downstream_status_left==1 && advanced_status_left==2)) % Left or right is blocked
-                    blockage(2)=1; % Through blockage
-                end
-            end
             % Check right turn and adjacent movements
-            if(downstream_status_right==3 && advanced_status_right==2) % Right turn congested
-                if(advanced_status_through==2 && downstream_status_through==1) % Through is blocked
+            if(downstream_status_right>=2.5 && advanced_status_right>=1.5) % Right turn congested
+                if(advanced_status_through>=1.5 && downstream_status_through<1.5) % Through is blocked
                     blockage(3)=1; % Right turn blockage
                 end
             end
+            % Check through and adjacent movements
+            if(downstream_status_through>=2.5 && advanced_status_through>=1.5) % Through congested
+                if((downstream_status_right<1.5 && advanced_status_right>=1.5)||...
+                        (downstream_status_left<1.5 && advanced_status_left>=1.5)) % Left or right is blocked
+                    blockage(2)=1; % Through blockage
+                end
+            end
+            
             
             status=cell(3,1);
             queue=zeros(3,1);
@@ -1071,7 +1077,15 @@ classdef state_estimation
                     error('Wrong input of movements!')
             end
             
+            % Check the existence of lane blockage by other movements
+            % Rates for advanced detectors: 0(no data), 1(low occupancy), 2(high occupancy)
+            % Thresholds considering the averages from multiple detectors: [<1.5], [>=1.5]
             
+            % Rates for stopline detectors: 0(no data), 1(under saturated), 2(over saturated with high flow)
+            % 3(over saturated with low flow)
+            % Thresholds considering the averages from multiple detectors:
+            % [<1.5], [1.5<=, <2.5], [>= 2.5]
+                        
             if(advanced_status>=1.5) % Upstream high occupancy
                 if(downstream_status==0) % No downstream detector
                     if(sum(blockage)) % Lane blockage by other lanes
@@ -1086,37 +1100,43 @@ classdef state_estimation
 %                             *(threshold.to_link-threshold.to_advanced));
                     end
                 elseif(downstream_status <1.5)
-                    status={'Lane Blockage By Other Movements'};
-                    queue=max(0,(occ-occ_threshold)/(1-occ_threshold)*(threshold.to_link-threshold.to_advanced));
+                    if(sum(sum(blockage)))
+                        status={'Lane Blockage By Other Movements'};
+                        queue=max(0,(occ-occ_threshold)/(1-occ_threshold)*(threshold.to_link-threshold.to_advanced));
+                    else
+                        status={'Oversaturated With Long Queue'};
+                        queue=threshold.to_advanced+...
+                            max(0,(occ-occ_threshold)/(1-occ_threshold)*(threshold.to_link-threshold.to_advanced));
+                    end
 %                     queue=max(0,(speed_threshold-speed)/speed_threshold...
 %                         *(threshold.to_link-threshold.to_advanced));
-                elseif(downstream_status>=2 && downstream_status<3)
+                elseif(downstream_status>=1.5 && downstream_status<2.5)
                     status={'Oversaturated With Long Queue'};
                     queue=threshold.to_advanced+...
                             max(0,(occ-occ_threshold)/(1-occ_threshold)*(threshold.to_link-threshold.to_advanced));
 %                     queue=threshold.to_advanced+ max(0,(speed_threshold-speed)/speed_threshold...
 %                         *(threshold.to_link-threshold.to_advanced));
-                elseif(downstream_status==3)
+                elseif(downstream_status>=2.5)
                     status={'Downstream Spillback With Long Queue'};
                     queue=threshold.to_advanced+...
                             max(0,(occ-occ_threshold)/(1-occ_threshold)*(threshold.to_link-threshold.to_advanced));
 %                     queue=threshold.to_advanced+ max(0,(speed_threshold-speed)/speed_threshold...
 %                         *(threshold.to_link-threshold.to_advanced));
                 end
-            elseif(advanced_status>=1 && advanced_status<2) % Upstream low occupancy
+            elseif(advanced_status>=1 && advanced_status<1.5) % Upstream low occupancy
                 if(downstream_status==0) % No downstream detector
                     status={'Short Queue'};
                     queue=max(0,occ/occ_threshold*threshold.to_advanced);
 %                     queue=max(0,(speed_freeflow-speed)/(speed_freeflow-speed_threshold)*threshold.to_advanced);
-                elseif(downstream_status <2)
+                elseif(downstream_status <1.5)
                     status={'No Congestion'};
                     queue=max(0,occ/occ_threshold*threshold.to_advanced);
 %                     queue=0;
-                elseif(downstream_status>=2 && downstream_status<3)
+                elseif(downstream_status>=1.5 && downstream_status<2.5)
                     status={'Oversaturated With Short Queue'};
                     queue=max(0,occ/occ_threshold*threshold.to_advanced);
 %                     queue=max(0,(speed_freeflow-speed)/(speed_freeflow-speed_threshold)*threshold.to_advanced);
-                elseif(downstream_status==3)
+                elseif(downstream_status>=2.5)
                     status={'Downstream Spillback With Short Queue'};
                     queue=max(0,occ/occ_threshold*threshold.to_advanced);
 %                     queue=max(0,(speed_freeflow-speed)/(speed_freeflow-speed_threshold)*threshold.to_advanced);
@@ -1125,7 +1145,7 @@ classdef state_estimation
                 if(downstream_status==0) % No downstream detector
                     status={'Unknown'};
                     queue=-1;
-                elseif(downstream_status <2)
+                elseif(downstream_status <1.5)
                     if(sum(blockage))
                         status={'Lane Blockage By Other Movements'};
                         queue=max(0,(threshold.to_link-threshold.to_advanced)*rand); % Randomly pick a value
@@ -1134,10 +1154,10 @@ classdef state_estimation
                         queue=max(0,threshold.to_advanced*rand); % Randomly pick a value
 %                         queue=0;
                     end
-                elseif(downstream_status>=2 && downstream_status<3)
+                elseif(downstream_status>=1.5 && downstream_status<2.5)
                     status={'Oversaturated'};
                     queue=0.5*threshold.to_link*rand; % Randomly pick a value
-                elseif(downstream_status==3)
+                elseif(downstream_status>=2.5)
                     status={'Downstream Spillback'};
                     queue=0.5*threshold.to_link+0.5*threshold.to_link*rand;
                 end

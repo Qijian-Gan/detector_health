@@ -5,7 +5,7 @@ close all
 load('C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\output\Scaled_data_test.mat')
 
 day=9;
-type='Right Turn';
+type='Approach';
 for i=1:size(appDataEvl,1)
     
     switch type
@@ -42,17 +42,20 @@ for i=1:size(appDataEvl,1)
             plot(time,data,'-.c')
             clear time data
             
-            if(isempty(appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data))
-                data=0;
-                time=0;
-            else
-                time=appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data.time/3600;
-                data=appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data.data;
-            end
-            plot(time,data,'-*m')
-            clear time data
+%             if(isempty(appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data))
+%                 data=0;
+%                 time=0;
+%             else
+%                 time=appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data.time/3600;
+%                 data=appDataEvl(i).data_evaluation.approach_volume.turning_count(day).data.data;
+%             end
+%             plot(time,data,'-*m')
+%             clear time data
             
-            legend('Scaled flow', 'Advanced count','Midlink count','Turning count')
+%             legend('Scaled flow', 'Advanced count','Midlink count','Turning count')
+            legend('Scaled flow', 'Advanced count','Midlink count')
+            xlabel('Time (hr)','FontSize',13);
+            ylabel('Flow-rate (vph)','FontSize',13);
         otherwise
             switch type
                 case 'Left Turn'

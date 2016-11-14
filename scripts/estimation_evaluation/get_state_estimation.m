@@ -32,7 +32,7 @@ fileName='state_estimation_result.xlsx';
 for day=8:9 % Weekday and weekend
     appStateEst=[];    
     for i=1:size(appConfig.approachConfig,1) % Loop for all approaches  
-        for t=from:22*interval:to % Loop for all prediction intervals
+        for t=from:interval:to % Loop for all prediction intervals
             queryMeasures=struct(...
                 'year',     nan,...
                 'month',    nan,...
@@ -55,6 +55,7 @@ for day=8:9 % Weekday and weekend
     end
     sheetName=days{day+1};
     est.extract_to_excel(appStateEst,folderLocation,fileName,sheetName);
+    save(sprintf('appStateEst_%s.mat',days{day+1}),'appStateEst');
 end
 
 

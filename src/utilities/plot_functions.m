@@ -22,8 +22,11 @@ classdef plot_functions
             xlabel('Time (Hr)','FontSize',13);
             ylabel(ax(1),y1_label,'FontSize',13);   
             ylabel(ax(2),y2_label,'FontSize',13);  
-            set(gca,'XTick',[min([time_BT;time_sensor]):2:max([time_BT;time_sensor])]);
-            set(gca,'XLim',[min([time_BT;time_sensor]) max([time_BT;time_sensor])]);
+            set(ax,'XTick',[min([time_BT;time_sensor]):2:max([time_BT;time_sensor])]);
+            set(ax,'XLim',[min([time_BT;time_sensor]) max([time_BT;time_sensor])]);
+            
+            set(ax(1),'YLim',[0 max(BTdata)]);
+            
             title(titlestr,'FontSize',13);
             grid on
             
