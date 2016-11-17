@@ -31,8 +31,16 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\bluetooth');
         end
         
-        function [x] = simVehicle_data()
-            x = fullfile(findFolder.root,'data\simVehData');
+        function [x] = aimsunSimVehicle_data()
+            x = fullfile(findFolder.root,'data\aimsun_simVehData');
+        end
+        
+        function [x] = aimsunSimSignal_data()
+            x = fullfile(findFolder.root,'data\aimsun_simSigData');
+        end
+        
+        function [x] = aimsunNetwork_data()
+            x = fullfile(findFolder.root,'data\aimsun_networkData');
         end
         
         function [x] = config()
@@ -45,6 +53,10 @@ classdef findFolder
         
         function [x] = temp()
             x = fullfile(findFolder.root,'temp');
+        end
+        
+        function [x] = temp_aimsun()
+            x = fullfile(findFolder.root,'temp_aimsun');
         end
         
         function [x] = objects()

@@ -4,7 +4,7 @@ classdef simVehicle_data_provider
         inputFolderLocation             % Folder that stores the vehicle trajectory file
         outputFolderLocation            % Folder that outputs the processed files
         
-        listSections                 % List of detectors
+        listSections                 % List of sections
         timePeriod                   % Time period: [start_time, end_time] in seconds
         distance                     % Distance from the stopbar that is used to get the turning proportions of vehicles in this region
     end
@@ -15,7 +15,7 @@ classdef simVehicle_data_provider
             %% This function is to obtain the sensor data
             
             % First, set default input and output folders
-            this.inputFolderLocation=findFolder.temp;
+            this.inputFolderLocation=findFolder.temp_aimsun;
             this.outputFolderLocation=findFolder.outputs;
             
             if(nargin>=1)
@@ -37,6 +37,8 @@ classdef simVehicle_data_provider
             % This function is to get data for given sections and time
             % period
             
+            %% Note: the lane IDs are ordered from rightmost to leftmost!!
+            
             % Get all parameters
             if(isempty(listOfSections))
                 error('No section list!')
@@ -45,18 +47,19 @@ classdef simVehicle_data_provider
             % Get the number of sections
             numOfSections=length(listOfSections);
             data_out=[];
+            startTime=timePeriod(1);
+            endTime=timePeriod(2);  
+                        
             % First read the data file
             for i=1:numOfSections
-                sectionID=char(listOfSections(i));
+                sectionID=(listOfSections(i));
                 
                 % Load data file
-                dataFile=fullfile(this.inputFolderLocation,sprintf('SimVeh_Section%s.mat',sectionID));
+                dataFile=fullfile(this.inputFolderLocation,sprintf('SimVeh_Section_%d.mat',sectionID));
                 if(exist(dataFile,'file'))
                     load(dataFile); % Inside: vehSectionAll
                     
-                    if(~isempty(timePeriod))
-                        startTime=timePeriod(1);
-                        endTime=timePeriod(2);                        
+                    if(~isempty(timePeriod)) % Time periods in seconds                                              
                         idx=(vehSectionAll(:,1)>=startTime & vehSectionAll(:,1)<endTime);
                         tmp_data=vehSectionAll(idx,:);
                     else
@@ -70,31 +73,32 @@ classdef simVehicle_data_provider
                             'endTime',endTime,...
                             'data',nan,...
                             'proportionQueue',nan,...
-                            'proportionLeft',nan,...
-                            'proportionRight',nan,...
+                            'turning',nan,...
                             'turningLane',nan,...
                             'centriodLane',nan,...
                             'speed',nan,...
                             'speedLane',nan)];
                     else
-                                                
-                        proportionQueue=sum(tmp_data(:,end))/length(tmp_data(:,end)); % Get the proportion of stopped vehicles
+                          
+                        % Get the proportion of stopped vehicles
+                        proportionQueue=sum(tmp_data(:,end))/length(tmp_data(:,end)); 
                         
-                        % Check turning proportions
-                        idx=(tmp_data(:,7)<=distance);
+                        % Check turning proportions: aggregated level
+                        idx=(tmp_data(:,11)<=distance);% Compared with the Distance2End
                         turning_data=tmp_data(idx,:);
-                        proportionLeft=sum(turning_data(:,11))/length(turning_data(:,11));
-                        proportionRight=sum(turning_data(:,12))/length(turning_data(:,12));
-                        
-                        lanes=unique(tmp_data(:,6));
+                        turning.Left=sum(turning_data(:,12))/length(turning_data(:,12));
+                        turning.Right=sum(turning_data(:,13))/length(turning_data(:,13));
+                       
+                        % Get the lane information
+                        lanes=sort(unique(tmp_data(:,6)));
                         turningLane=[];                       
                         centriodLane=[];
                         for j=1:length(lanes)
-                            turning_data_lane=turning_data(turning_data(:,6)==j,:);
+                            turning_data_lane=turning_data(turning_data(:,6)==lanes(j),:);
                             turningLane=[turningLane; struct(...
-                                'laneID',j,...
-                                'turningLeft',sum(turning_data_lane(:,11))/length(turning_data_lane(:,11)),...
-                                'turningRight',sum(turning_data_lane(:,12))/length(turning_data_lane(:,12)))];
+                                'laneID',lanes(j),...
+                                'turningLeft',sum(turning_data_lane(:,12))/length(turning_data_lane(:,12)),...
+                                'turningRight',sum(turning_data_lane(:,13))/length(turning_data_lane(:,13)))];
                             
                             centriodLane=[centriodLane; struct(...
                                 'laneID',j,...
@@ -123,8 +127,7 @@ classdef simVehicle_data_provider
                             'endTime',endTime,...
                             'data',tmp_data,...
                             'proportionQueue',proportionQueue,...
-                            'proportionLeft',proportionLeft,...
-                            'proportionRight',proportionRight,...
+                            'turning',turning,...
                             'turningLane',turningLane,...
                             'centriodLane',centriodLane,...
                             'speed',speed,...
@@ -139,8 +142,7 @@ classdef simVehicle_data_provider
                             'endTime',endTime,...
                             'data',nan,...
                             'proportionQueue',nan,...
-                            'proportionLeft',nan,...
-                            'proportionRight',nan,...
+                            'turning',nan,...
                             'turningLane',nan,...
                             'centriodLane',nan,...
                             'speed',nan,...

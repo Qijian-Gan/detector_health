@@ -1,4 +1,4 @@
-classdef load_simVehicle_data
+classdef load_simSignal_data
     properties
         folderLocation          % Location of the folder that stores the simVehicle data files
         outputFolderLocation    % Location of the output folder
@@ -8,7 +8,7 @@ classdef load_simVehicle_data
     
     methods ( Access = public )
         
-        function [this]=load_simVehicle_data(folder,outputFolder)
+        function [this]=load_simSignal_data(folder,outputFolder)
             % This function is to load the simVehicle data file
             
             if nargin>0
@@ -16,7 +16,7 @@ classdef load_simVehicle_data
                 this.outputFolderLocation=outputFolder;
             else
                 % Default folder location
-                this.folderLocation=findFolder.aimsunSimVehicle_data;
+                this.folderLocation=findFolder.aimsunSimSignal_data;
                 this.outputFolderLocation=findFolder.temp_aimsun;
             end   
             
@@ -25,51 +25,76 @@ classdef load_simVehicle_data
             
         end
         
-        function [data]=parse_csv(this,file, location)
-            % This function is to parse the csv file with only number inputs
+        function [data]=parse_txt(this,file, location)
+            % This function is to parse the txt file of signal phasing
+            % inputs
+            
+            dataFormat=load_simSignal_data.dataFormat;
             
             % Open the file
-            tmp_data=csvread(fullfile(location,file),1,0); % Skip the header
+            fileID = fopen(fullfile(location,file));
+                      
+            tline=fgetl(fileID); % Ignore the first line
             
-            % Get wrong simulated vehicles
-            idx=(tmp_data(:,6)<0 | tmp_data(:,9)==0 |tmp_data(:,10)==0 ); % Lane ID not negative, and OD ID greater than zero
-            wrong_veh=unique(tmp_data(idx,2)); % Get the set of wrong simulated vehicles
-            clear idx
+            data=[];
             
-            % Remove wrong vehicles
-            idx=ismember(tmp_data(:,2),wrong_veh);
-            data=tmp_data(~idx,:);
+            tline=fgetl(fileID); % Starting from the second line
+            while ischar(tline)
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                
+                simStartTime=str2double(tmp{1,1}{1,1});
+                dataFormat.TimeStamp=str2double(tmp{1,1}{2,1});
+                dataFormat.JunctionID=str2double(tmp{1,1}{3,1});
+                dataFormat.ControlType=str2double(tmp{1,1}{4,1});
+                dataFormat.CurrentPhase=str2double(tmp{1,1}{5,1});
+                dataFormat.NumberOfRings=str2double(tmp{1,1}{6,1});
+                
+                StartTimeOfRings=[];
+                for i=1:dataFormat.NumberOfRings
+                    StartTimeOfRings=[StartTimeOfRings,dataFormat.TimeStamp+(str2double(tmp{1,1}{6+i,1})-simStartTime)];
+                end
+                dataFormat.StartTimeOfRings=StartTimeOfRings; 
+                
+                data=[data;dataFormat];
+                tline=fgetl(fileID);
+            end
 
         end
         
          
         function save_data(this,data)
-            %This function is used to save the data based on the section
+            %This function is used to save the data based on the junction
             %IDs
             
-            % Get the list of sections
-            sections=unique(data(:,4));
-            numSections=length(sections);
+            % Get the list of junctions
+            junctions=unique([data.JunctionID]');
+            numJunctions=length(junctions);
             
-            % Loop for each section
-            for i=1:numSections
-                idx=(data(:,4)==sections(i));
-                dataSection=data(idx,:); % Select data for a given section
+            % Loop for each junction
+            for i=1:numJunctions
+                junctionAll=[data.JunctionID]';
+                
+                idx=ismember(junctionAll,junctions(i));
+                datajunction=data(idx,:); % Select data for a given section
                 
                 % Get the file name
-                fileName=fullfile(this.outputFolderLocation,sprintf('SimVeh_Section_%d.mat',sections(i)));
+                fileName=fullfile(this.outputFolderLocation,sprintf('SimSig_Junction_%d.mat',junctions(i)));
                 
                 if(exist(fileName,'file')) % If the file exists
                     load(fileName); % Variable: 'vehSectionAll'   
-                    vehSectionAll=[vehSectionAll;dataSection];
-                    vehSectionAll=unique(vehSectionAll,'rows'); % Get unique values
+                    sigJunctionAll=[sigJunctionAll;datajunction];
+                    
+                    sigMatrix=[[sigJunctionAll.TimeStamp]',[sigJunctionAll.JunctionID]',[sigJunctionAll.ControlType]',...
+                        [sigJunctionAll.CurrentPhase]',[sigJunctionAll.NumberOfRings]'];
+                    [~,ia,~]=unique(sigMatrix,'rows');
+                    sigJunctionAll=sigJunctionAll(ia,:); % Get unique values
                 else    
                     % If it is the first time
-                    vehSectionAll=dataSection;                    
+                    sigJunctionAll=datajunction;                    
                 end
                 
                 % Save the health report
-                save(fileName,'vehSectionAll');                
+                save(fileName,'sigJunctionAll');                
             end
             
         end
@@ -144,19 +169,12 @@ classdef load_simVehicle_data
              % This function is used to return the structure of data format
              
              dataFormat=struct(...
-                'Time',                 nan,...
-                'VehicleID',            nan,...
-                'Type',                 nan,...
-                'SectionID',            nan,...
-                'SegmentID',            nan,...
-                'LaneID',               nan,...
-                'Distance2End',         nan,...
-                'CurrentSpeed',         nan,...
-                'CentroidOrigin',       nan,...
-                'CentriodDestination',  nan,...
-                'StatusLeft',           nan,...
-                'StatusRight',          nan,...
-                'StatusStop',           nan);
+                'TimeStamp',                 nan,...
+                'JunctionID',                nan,...
+                'ControlType',               nan,...
+                'CurrentPhase',              nan,...
+                'NumberOfRings',             nan,...
+                'StartTimeOfRings',          nan);
          end
          
      end
