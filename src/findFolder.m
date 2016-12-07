@@ -43,6 +43,10 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\aimsun_networkData');
         end
         
+        function [x] = estStateQueue_data()
+            x = fullfile(findFolder.root,'data\estStateQueueData');
+        end
+        
         function [x] = config()
             x = fullfile(findFolder.root,'config');
         end

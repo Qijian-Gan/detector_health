@@ -2,20 +2,27 @@ classdef reconstruct_aimsun_network
     properties
         outputFolderLocation    % Location of the output folder
 
-        junctionData         % Data that contains junction information
-        sectionData          % Data that contains section information
+        junctionData            % Data that contains junction information
+        sectionData             % Data that contains section information
+        detectorData            % Data that contains detector information
+        defaultSigSetting       % Data that contains default signal settings
+        midlinkCountConfig      % Configuration file that can be used to access the midlink counts
         
-        networkData          % Data that contains both junction and section information (reconstructed)
+        networkData             % Data that contains both junction and section information (reconstructed)
         
     end
     
     methods ( Access = public )
         
-        function [this]=reconstruct_aimsun_network(junctionData,sectionData,outputFolder)
-            % This function is to reconstruct the aimsun network
+        function [this]=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSetting,midlinkCountConfig,outputFolder)
+            %% This function is to reconstruct the aimsun network
             
             this.junctionData=junctionData;
             this.sectionData=sectionData;
+            this.detectorData=detectorData;
+            this.defaultSigSetting=defaultSigSetting;
+            this.midlinkCountConfig=midlinkCountConfig;
+            
             if(~isnan(outputFolder))
                 this.outputFolderLocation=outputFolder;
             else
@@ -25,7 +32,7 @@ classdef reconstruct_aimsun_network
         end
         
         function [junctionApproachData]=reconstruction(this)
-            % Main function: reconstruction
+            %% Main function: reconstruction
             
             junctionDataAll=this.junctionData;
             sectionDataAll=this.sectionData;           
@@ -38,14 +45,27 @@ classdef reconstruct_aimsun_network
             
             junctionApproachData=[];
             for i=1:numJunctionNonlinear % Loop for each nonlinear junction
+
                 numEntranceSections=junctionDataNonlinear(i).NumEntranceSection;
                 for j=1:numEntranceSections % Loop for each entrance section: approach
+
                     tmpJunctionApproachData.JunctionInf=junctionDataNonlinear(i); % Save the junction information for latter use
                     
                     % Get the junction name and ID
                     tmpJunctionApproachData.JunctionID=junctionDataNonlinear(i).JunctionID;
                     tmpJunctionApproachData.JunctionName=junctionDataNonlinear(i).Name;
-                    tmpJunctionApproachData.JunctionExtID=junctionDataNonlinear(i).ExternalID;
+                    
+                    if(~isempty(junctionDataNonlinear(i).ExternalID))
+                        [ID,City,County]=reconstruct_aimsun_network.find_id_city_county(junctionDataNonlinear(i).ExternalID);
+                        tmpJunctionApproachData.JunctionExtID=ID;
+                        tmpJunctionApproachData.City=City;
+                        tmpJunctionApproachData.County=County;
+                    else
+                        tmpJunctionApproachData.JunctionExtID=[];
+                        tmpJunctionApproachData.City=[];
+                        tmpJunctionApproachData.County=[];
+                    end
+
                     tmpJunctionApproachData.Signalized=junctionDataNonlinear(i).Signalized;
                     
                     % Get the approach link name and ID
@@ -63,7 +83,7 @@ classdef reconstruct_aimsun_network
                     tmpJunctionApproachData.SectionBelongToApproach.ListOfSections=SectionBelongToApproach;
                     tmpJunctionApproachData.SectionBelongToApproach.Property=reconstruct_aimsun_network.findSectionProperty...
                         (junctionDataAll,sectionDataAll,SectionBelongToApproach);
-                    
+               
                     % Turning properties at the downstream section
                     [ListOfTurnings,TurningProperty]=reconstruct_aimsun_network.findTurningsAtFirstSection...
                         (junctionDataNonlinear(i),tmpJunctionApproachData.FirstSectionID);
@@ -73,6 +93,56 @@ classdef reconstruct_aimsun_network
                     % Lane-turning Properties
                     [LaneTurningProperty]=reconstruct_aimsun_network.findLaneTurningProperty(tmpJunctionApproachData);
                     tmpJunctionApproachData.LaneTurningProperty=LaneTurningProperty;
+
+                    % Get the aggregated road geometry: lanes, length, and turning pockets
+                    linkLength=0;
+                    for k=1:length(tmpJunctionApproachData.SectionBelongToApproach.ListOfSections)
+                        linkLength=linkLength+max( tmpJunctionApproachData.SectionBelongToApproach.Property(k).LaneLengths);
+                    end                    
+                    tmpJunctionApproachData.GeoDesign.LinkLength=linkLength;
+                    
+                    [NumOfLanes,NumOfDownsteamLanes,ExclusiveLeftTurn,ExclusiveRightTurn]=reconstruct_aimsun_network.find_turning_pockets(...
+                        tmpJunctionApproachData.SectionBelongToApproach,tmpJunctionApproachData.TurningBelongToApproach,...
+                        tmpJunctionApproachData.LaneTurningProperty); 
+                    tmpJunctionApproachData.GeoDesign.NumOfLanes=NumOfLanes;
+                    tmpJunctionApproachData.GeoDesign.NumOfDownsteamLanes=NumOfDownsteamLanes;
+                    tmpJunctionApproachData.GeoDesign.ExclusiveLeftTurn=ExclusiveLeftTurn;
+                    tmpJunctionApproachData.GeoDesign.ExclusiveRightTurn=ExclusiveRightTurn;
+                    
+                    % Check the default signal settings
+                    tmpJunctionApproachData.DefaultSigSetting=struct(...
+                        'CycleLength',            120,...
+                        'LeftTurnGreen',    15,...
+                        'ThroughGreen',     30,...
+                        'RightTurnGreen',   30);
+                    junctionSectionID=[tmpJunctionApproachData.JunctionID,tmpJunctionApproachData.FirstSectionID];
+                    if(~isempty(this.defaultSigSetting)) 
+                        junctionSectionIDAll=[[this.defaultSigSetting.IntersectionID]',[this.defaultSigSetting.FirstSectionID]'];
+                        
+                        [~,idx]=ismember(junctionSectionID,junctionSectionIDAll,'rows');                        
+                        if(sum(idx))
+                            tmpJunctionApproachData.DefaultSigSetting=struct(...
+                                'CycleLength',      this.defaultSigSetting(idx).CycleLength,...
+                                'LeftTurnGreen',    this.defaultSigSetting(idx).LeftTurnGreen,...
+                                'ThroughGreen',     this.defaultSigSetting(idx).ThroughGreen,...
+                                'RightTurnGreen',   this.defaultSigSetting(idx).RightTurnGreen);
+                        end
+                    end
+                    
+                    % Check the midlink config files
+                    tmpJunctionApproachData.MidlinkCountConfig=struct(...
+                        'Location',    'NAN',...
+                        'Approach',    'NAN');
+                    if(~isempty(this.midlinkCountConfig)) 
+                        junctionSectionIDAll=[[this.midlinkCountConfig.IntersectionID]',[this.midlinkCountConfig.FirstSectionID]'];
+                        
+                        [~,idx]=ismember(junctionSectionID,junctionSectionIDAll,'rows');                        
+                        if(sum(idx))
+                            tmpJunctionApproachData.MidlinkCountConfig=struct(...
+                                'Location',    this.midlinkCountConfig(idx).Location,...
+                                'Approach',    this.midlinkCountConfig(idx).Approach);
+                        end
+                    end
                     
                     junctionApproachData=[junctionApproachData;tmpJunctionApproachData];
                 end
@@ -84,6 +154,75 @@ classdef reconstruct_aimsun_network
     
      methods ( Static)
            
+         function [NumOfLanes,NumOfDownsteamLanes,ExclusiveLeftTurn,ExclusiveRightTurn]=find_turning_pockets(SectionBelongToApproach,...
+                 TurningBelongToApproach, LaneTurningProperty)
+             
+             % Get the number of full GP lanes in the upstream
+             NumOfLanes=sum(SectionBelongToApproach.Property(end).IsFullLane);
+             
+             % Get the number of downstream GP lanes, left-turn and
+             % right-turn pockets             
+             TurningProperty=TurningBelongToApproach.TurningProperty;
+             turnIDs=[TurningProperty.TurnID]';
+             Description={TurningProperty.Description}';
+             
+             ExclusiveLeftTurn.NumLane=0;
+             ExclusiveLeftTurn.Pocket=0;
+             ExclusiveRightTurn.NumLane=0;
+             ExclusiveRightTurn.Pocket=0;
+             NumOfDownsteamLanes=0;
+             for i=1:size(LaneTurningProperty(1).Lanes,1) % Loop for each lane in the downstream section
+                 if(LaneTurningProperty(1).Lanes(i).IsExclusive) % If it is exclusive
+                     [~,idx]=ismember(LaneTurningProperty(1).Lanes(i).TurnMovements,turnIDs);
+                     if(sum(idx) && ~isempty(Description{idx,:})) % If has description
+                         switch Description{idx,:}
+                             case 'Left Turn' % Exclusive left turn
+                                 ExclusiveLeftTurn.NumLane=ExclusiveLeftTurn.NumLane+1;
+                                 if(ExclusiveLeftTurn.Pocket==0)
+                                     ExclusiveLeftTurn.Pocket=LaneTurningProperty(1).Lanes(i).Length;
+                                 else
+                                     ExclusiveLeftTurn.Pocket=min(ExclusiveLeftTurn.Pocket,LaneTurningProperty(1).Lanes(i).Length);
+                                 end
+                             case 'Right Turn' % Exclusive right turn
+                                 ExclusiveRightTurn.NumLane=ExclusiveRightTurn.NumLane+1;
+                                 if(ExclusiveRightTurn.Pocket==0)
+                                     ExclusiveRightTurn.Pocket=LaneTurningProperty(1).Lanes(i).Length;
+                                 else
+                                     ExclusiveRightTurn.Pocket=min(ExclusiveRightTurn.Pocket,LaneTurningProperty(1).Lanes(i).Length);
+                                 end
+                             case 'Through' % Through movement
+                                 NumOfDownsteamLanes=NumOfDownsteamLanes+1;
+                         end
+                     else % If no description
+                         NumOfDownsteamLanes=NumOfDownsteamLanes+1;
+                     end
+                 else % If it is not exclusive
+                     NumOfDownsteamLanes=NumOfDownsteamLanes+1;
+                 end
+             end
+             
+             
+         end
+         
+         function [ID,City,County]=find_id_city_county(ExternalID)
+             %% This function is used to get the junction external ID, and the city and county it belongs to
+             
+             tmp=strsplit(ExternalID,' ');
+             
+             ID=str2num(tmp{1,2});
+             City=[];
+             County=[];
+             switch tmp{1,1}
+                 case 'AR'
+                     City='Arcadia';
+                     County='Los Angeles';
+                 case 'PA'
+                     City='Passadena';
+                     County='Los Angeles';
+             end
+             
+         end
+         
          function [junctionDataNonlinear,junctionDataLinear]=getNonlinearAndLinearJunction(junctionDataAll)
              % This function is to get nonliear/linear junction data
              listNumEntranceSections=[junctionDataAll.NumEntranceSection]';
@@ -264,6 +403,7 @@ classdef reconstruct_aimsun_network
              end
              
          end
+         
          function [dataFormat]=dataFormatJunction
              % This function is used to return the structure of data
              % format: Junction

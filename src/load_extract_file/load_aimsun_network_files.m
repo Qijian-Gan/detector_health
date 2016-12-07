@@ -5,6 +5,9 @@ classdef load_aimsun_network_files
 
         junctionInfFile         % File name for junction information
         sectionInfFile          % File name for section information
+        detectorInfFile         % File name for detector information
+        defaultSigSettingFile   % File name for default signal settings
+        midlinkCountConfigFile  % File name for the configuration of midlink count
         
     end
     
@@ -82,7 +85,11 @@ classdef load_aimsun_network_files
                         'OrigFromLane',     str2double(tmp{1,1}{4,1}),...
                         'OrigToLane',       str2double(tmp{1,1}{5,1}),...
                         'DestFromLane',     str2double(tmp{1,1}{6,1}),...
-                        'DestToLane',       str2double(tmp{1,1}{7,1}));
+                        'DestToLane',       str2double(tmp{1,1}{7,1}),...
+                        'Description',      []);
+                    if(length(tmp{1,1})==8)
+                        data(i).Turnings.TurningInf(j).Description=tmp{1,1}{8,1};
+                    end
                 end
                 
                 tline=fgetl(fileID); % Get the orders of turnings                
@@ -147,10 +154,124 @@ classdef load_aimsun_network_files
                 tline=fgetl(fileID); % Get the blank line
             end
         end 
+        
+        function [data]=parse_detectorInf_csv(this,detectorInfFile)
+            % This function is to parse the csv file of section
+            % information
+            
+            % Open the file
+            fileID = fopen(fullfile(this.folderLocation,detectorInfFile));
+                      
+            tline=fgetl(fileID); % Ignore the first line            
+            data=[];
+            
+            tline=fgetl(fileID);
+            while(tline>0)
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                
+                tmpData=struct(...
+                    'DetectorID',                       str2num(tmp{1,1}{1,1}),...
+                    'ExternalID',                       str2num(tmp{1,1}{2,1}),...
+                    'SectionID',                        str2num(tmp{1,1}{3,1}),...
+                    'Description',                      tmp{1,1}{4,1},...
+                    'FirstLane',                        str2num(tmp{1,1}{5,1}),...
+                    'LastLane',                         str2num(tmp{1,1}{6,1}),...
+                    'InitialPosition',                  str2double(tmp{1,1}{7,1}),...
+                    'FinalPosition',                    str2double(tmp{1,1}{8,1}));
+                tmpData.NumOfLanesCovered=tmpData.LastLane-tmpData.FirstLane+1;
+                tmpData.Length=tmpData.FinalPosition-tmpData.InitialPosition;
+                
+                data=[data;tmpData];
+                tline=fgetl(fileID);
+            end
+
+        end 
+        
+        function [data]=parse_defaultSigSetting_csv(this,sigInfFile)
+            % This function is to parse the csv file of default signal
+            % settings
+            
+            % Open the file
+            fileID = fopen(fullfile(this.folderLocation,sigInfFile));
+                      
+            tline=fgetl(fileID); % Ignore the first line            
+            data=[];
+            
+            tline=fgetl(fileID);
+            while(tline>0)
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                
+                tmpData=struct(...
+                    'IntersectionName',             tmp{1,1}{1,1},...
+                    'IntersectionID',               str2num(tmp{1,1}{2,1}),...
+                    'IntersectionExtID',            str2num(tmp{1,1}{3,1}),...
+                    'County',                       tmp{1,1}{4,1},...
+                    'City',                         tmp{1,1}{5,1},...
+                    'FirstSectionName',             tmp{1,1}{6,1},...
+                    'FirstSectionID',               str2num(tmp{1,1}{7,1}),...
+                    'CycleLength',                  str2double(tmp{1,1}{8,1}),...
+                    'LeftTurnGreen',                str2double(tmp{1,1}{9,1}),...
+                    'ThroughGreen',                 str2double(tmp{1,1}{10,1}),...
+                    'RightTurnGreen',               str2double(tmp{1,1}{11,1}),...
+                    'LeftTurnSetting',              tmp{1,1}{12,1});
+                
+                data=[data;tmpData];
+                tline=fgetl(fileID);
+            end
+
+        end 
+        
+         function [data]=parse_midlinkCountConfig_csv(this,midlinkInfFile)
+            % This function is to parse the csv file of midlink count
+            % configuration files
+            
+            % Open the file
+            fileID = fopen(fullfile(this.folderLocation,midlinkInfFile));
+                      
+            tline=fgetl(fileID); % Ignore the first line            
+            data=[];
+            
+            tline=fgetl(fileID);
+            while(tline>0)
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                
+                tmpData=struct(...
+                    'IntersectionName',             tmp{1,1}{1,1},...
+                    'IntersectionID',               str2num(tmp{1,1}{2,1}),...
+                    'IntersectionExtID',            str2num(tmp{1,1}{3,1}),...
+                    'County',                       tmp{1,1}{4,1},...
+                    'City',                         tmp{1,1}{5,1},...
+                    'FirstSectionName',             tmp{1,1}{6,1},...
+                    'FirstSectionID',               str2num(tmp{1,1}{7,1}),...
+                    'Location',                     tmp{1,1}{8,1},...
+                    'Approach',                     tmp{1,1}{9,1});
+                
+                data=[data;tmpData];
+                tline=fgetl(fileID);
+            end
+
+        end
     end
     
      methods ( Static)
-                  
+           
+         function [dataFormat]=dataFormatDetector
+             % This function is used to return the structure of data
+             % format: Detector
+             
+             dataFormat=struct(...
+                'DetectorID',                       nan,...
+                'ExternalID',                       nan,...
+                'SectionID',                        nan,...
+                'Description',                      nan,...
+                'NumOfLanesCovered',                nan,...
+                'FirstLane',                        nan,...
+                'LastLane',                         nan,...
+                'InitialPosition',                  nan,...
+                'FinalPosition',                    nan,...
+                'Length',                           nan);
+         end
+         
          function [dataFormat]=dataFormatJunction
              % This function is used to return the structure of data
              % format: Junction
@@ -189,7 +310,8 @@ classdef load_aimsun_network_files
                  'OrigFromLane',     nan,...
                  'OrigToLane',       nan,...
                  'DestFromLane',     nan,...
-                 'DestToLane',       nan);
+                 'DestToLane',       nan,...
+                 'Description',      nan);
          end
          
          function [dataFormat]=dataFormatTurningOrder
