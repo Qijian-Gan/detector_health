@@ -31,7 +31,7 @@ folderLocation=findFolder.reports;
 fileName='state_estimation_result.xlsx';
 for day=8:9 % Weekday and weekend
     appStateEst=[];    
-    for i=1:size(appConfig.approachConfig,1) % Loop for all approaches  
+    for i=1:size(appConfig.approachConfig,1) % Loop for all approaches 
         for t=from:interval:to % Loop for all prediction intervals
             queryMeasures=struct(...
                 'year',     nan,...

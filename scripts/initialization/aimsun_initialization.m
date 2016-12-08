@@ -19,7 +19,8 @@ midlinkConfigData=dp_network.parse_midlinkCountConfig_csv('MidlinkCountConfig.cs
 recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,midlinkConfigData,nan);
 % Reconstruct the network
 recAimsunNet.networkData=recAimsunNet.reconstruction();
-
+% Generate the configuration of approaches for traffic state estimation
+appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
 
 %% simVehicle data provider
 dp_vehicle=simVehicle_data_provider; 
