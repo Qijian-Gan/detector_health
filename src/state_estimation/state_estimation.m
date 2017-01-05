@@ -693,7 +693,7 @@ classdef state_estimation
                 
                 % Get the assessment of states and queues
                 [status_assessment,queue_assessment]=state_estimation.make_a_decision...
-                    (this.default_params,queue_threshold,advanced_status,stopline_status,exc_right_status,exc_left_status,avg_speed,avg_occ);
+                    (approach.turnIndicator,this.default_params,queue_threshold,advanced_status,stopline_status,exc_right_status,exc_left_status,avg_speed,avg_occ);
             end
         end
         
@@ -987,7 +987,7 @@ classdef state_estimation
             threshold.to_link=queue_exclusive+queue_general+queue_advanced;
         end
         
-        function [status,queue]=make_a_decision(default_params,queue_threshold,advanced_status,stopline_status,exc_right_status,exc_left_status,avg_speed,avg_occ)
+        function [status,queue]=make_a_decision(turnIndicator,default_params,queue_threshold,advanced_status,stopline_status,exc_right_status,exc_left_status,avg_speed,avg_occ)
             % This function is to make a final decision for left-turn,
             % through, and right-turn movements at the approach level
 
@@ -1051,6 +1051,13 @@ classdef state_estimation
                 (blockage,queue_threshold,downstream_status_right,advanced_status_right,avg_speed,speed_threshold,speed_freeflow,...
                 avg_occ,occ_threshold,'Right');
             
+            % Check turn indicator
+            for i=1:length(turnIndicator)
+                if(turnIndicator(i)==0)
+                    status(i)={'No Movement'};
+                    queue(i)=-2;
+                end
+            end
             
         end
         
@@ -1340,7 +1347,7 @@ classdef state_estimation
             
             outputFileName=fullfile(outputFolder,outputFileName);
             
-            xlswrite(outputFileName,[{'Intersection Name'},{'Road Name'},{'Direction'},{'Time'}...
+            xlswrite(outputFileName,[{'Intersection Name'},{'Road Name'},{'Direction'},{'Time'},...
                 {'Left Turn Status'},{'Through movement Status'},{'Right Turn Status'},...
                 {'Left Turn Queue'},{'Through movement Queue'},{'Right Turn Queue'}],outputSheetName);
             
@@ -1381,6 +1388,62 @@ classdef state_estimation
                 right_turn_queue],outputSheetName,sprintf('H2:J%d',length(left_turn_queue)+1));
             
             
+        end
+        
+        function [Table]=extract_to_csv(appStateEst,outputFolder,outputFileName)
+            % This function is extract the state estimation results to an
+            % excel file
+            
+            outputFileName=fullfile(outputFolder,outputFileName);
+            
+            fid = fopen(outputFileName,'w');
+            
+            fprintf(fid,'%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n','Junction ID','Junction Name','Junction ExtID','Signalized',...
+                'Direction (Section ID)','Section Name','Section ExtID','Time',...
+                'Left Turn Status','Through movement Status','Right Turn Status',...
+                'Left Turn Queue','Through movement Queue','Right Turn Queue');
+            
+            % Write intersection and detector information  
+            int_id=[];
+            int_extid=[];
+            signalized=[];
+            int_name=[];
+            road_name=[];
+            road_extid=[];
+            direction=[];
+            for i=1:size(appStateEst,1)
+                int_id=[int_id;repmat({appStateEst(i).intersection_id},size(appStateEst(i).decision_making,1),1)];
+                int_extid=[int_extid;repmat({appStateEst(i).intersection_extID},size(appStateEst(i).decision_making,1),1)];
+                signalized=[signalized;repmat({appStateEst(i).signalized},size(appStateEst(i).decision_making,1),1)];
+                int_name=[int_name;repmat({appStateEst(i).intersection_name},size(appStateEst(i).decision_making,1),1)];
+                road_name=[road_name;repmat({appStateEst(i).road_name},size(appStateEst(i).decision_making,1),1)];
+                direction=[direction;repmat({appStateEst(i).direction},size(appStateEst(i).decision_making,1),1)];
+                road_extid=[road_extid;repmat({appStateEst(i).road_extID},size(appStateEst(i).decision_making,1),1)];
+            end
+            
+            data=vertcat(appStateEst.decision_making);
+            time=vertcat({data.time})';
+            assessment=vertcat(data.status_assessment);
+            left_turn=[assessment.left_turn]';
+            through=([assessment.through])';
+            right_turn=([assessment.right_turn])';
+
+            queue=vertcat(data.queue_assessment);
+            left_turn_queue=ceil([queue.left_turn]');
+            through_queue=ceil([queue.through]');
+            right_turn_queue=ceil([queue.right_turn]');
+            
+            for i=1:length(left_turn)                
+                fprintf(fid,'%i,%s,%i,%i,%s,%s,%s,%i,%s,%s,%s,%i,%i,%i\n',int_id{i,:},int_name{i,:},int_extid{i,:},signalized{i,:},...
+                    direction{i,:},road_name{i,:},road_extid{i,:},time{i,:},...
+                    left_turn{i,:},through{i,:},right_turn{i,:},left_turn_queue(i,:),through_queue(i,:),right_turn_queue(i,:));
+            end
+            
+            fclose(fid);
+            
+            Table=[int_id,int_name,int_extid,signalized,direction,road_name,road_extid,time,...
+                left_turn,through,right_turn,...
+                num2cell(left_turn_queue),num2cell(through_queue),num2cell(right_turn_queue)];
         end
     end
 end

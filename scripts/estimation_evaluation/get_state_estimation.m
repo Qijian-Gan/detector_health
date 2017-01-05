@@ -32,7 +32,9 @@ fileName='state_estimation_result.xlsx';
 for day=8:9 % Weekday and weekend
     appStateEst=[];    
     for i=1:size(appConfig.approachConfig,1) % Loop for all approaches 
+        i
         for t=from:interval:to % Loop for all prediction intervals
+            t
             queryMeasures=struct(...
                 'year',     nan,...
                 'month',    nan,...

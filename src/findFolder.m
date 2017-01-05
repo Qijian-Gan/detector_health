@@ -39,6 +39,10 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\aimsun_simSigData');
         end
         
+        function [x] = fieldSimSignal_data()
+            x = fullfile(findFolder.root,'data\field_signal');
+        end
+        
         function [x] = aimsunNetwork_data()
             x = fullfile(findFolder.root,'data\aimsun_networkData');
         end

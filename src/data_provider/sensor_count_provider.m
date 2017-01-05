@@ -235,8 +235,17 @@ classdef sensor_count_provider
             
         end
 
-        function [data_out]=get_time_of_day_data(data,timeOfDay,useMedian)
+        function [data_out]=get_time_of_day_data(dataIn,timeOfDay,useMedian)
             % This function is to get the data for time of day
+            
+            % Due to the small bug in detector health, there exist some
+            % days with duplicated observations (more than 288 observations)
+            data=[];
+            for i=1:size(dataIn,1)
+                if(length(dataIn(i,1).time)==288)
+                    data=[data;dataIn(i)];
+                end
+            end
             
             if(size(data,1)==1) % Only one day
                 tmp_time=data(1).time;

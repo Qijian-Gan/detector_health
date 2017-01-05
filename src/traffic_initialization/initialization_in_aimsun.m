@@ -69,7 +69,8 @@ classdef initialization_in_aimsun
                     % estimated traffic states, queues, singla phasing, and
                     % current time
                     estStateQueueApproachUpdate=initialization_in_aimsun.update_vehicles_according_to_phase_currentTime...
-                        (this.fieldSigDataProvider,this.simSigDataProvider,CurrentTime,estStateQueueApproach,junctionSectionInf);
+                        (this.fieldSigDataProvider,this.simSigDataProvider,CurrentTime,estStateQueueApproach,...
+                        junctionSectionInf,this.defaultParams);
                     
                     % Generate vehicle with field estimation
                     tmpVehicleList=initialization_in_aimsun.generate_vehicle_with_fieldEstimation...
@@ -89,36 +90,110 @@ classdef initialization_in_aimsun
     methods ( Static)
         
         function [estStateQueueApproachUpdate]=update_vehicles_according_to_phase_currentTime...
-                (fieldSigDataProvider,simSigDataProvider,currentTime,estStateQueueApproach,junctionSectionInf)
+                (fieldSigDataProvider,simSigDataProvider,currentTime,estStateQueueApproach,junctionSectionInf,defaultParams)
             %% This function is used to update the number of vehicles accoridng to the average queue
             %% and the information of phasing and current time
             
             estStateQueueApproachUpdate=estStateQueueApproach;
             
-            if(isempty(fieldSigDataProvider)) % If fieldSigDataProvider is not available
-                % Currently use some simple methods
-%                 if(isempty(simSigDataProvider))
-                    estStateQueueApproach.Queue(estStateQueueApproach.Queue<0)=0;
-                    estStateQueueApproachUpdate.CurrentQueue=round(estStateQueueApproach.Queue*0.5);
-                    estStateQueueApproachUpdate.CurrentMoving=round(estStateQueueApproach.Queue*0.5);
-%                 else
-%                     phaseForApproach=repmat(struct(...
-%                        'Cycle', 120,...
-%                        'GreenTime', 30,...
-%                        'RedTime', 90,...
-%                        'CurrentStatus', 'Green',...
-%                        'DurationSinceActivated', 10),length(estStateQueueApproach.Queue),1);
-%                    
-%                    for i=1:length(estStateQueueApproach.Queue)
-%                        
-%                    end
-%                 end
-            else
-                % Currently  fieldSigDataProvider is not available!!
+            if(isempty(fieldSigDataProvider) && isempty(simSigDataProvider)) 
+                % If both fieldSigDataProvider and simSigDataProvider are not available
+                % Used some naive methods: 50-50 percent
                 estStateQueueApproach.Queue(estStateQueueApproach.Queue<0)=0;
                 estStateQueueApproachUpdate.CurrentQueue=round(estStateQueueApproach.Queue*0.5);
                 estStateQueueApproachUpdate.CurrentMoving=round(estStateQueueApproach.Queue*0.5);
+            else
+                % Movements are organized from left to right
+                if(~isempty(fieldSigDataProvider))
+                    % Use fieldSigDataProvider if it exists
+                    % Currently  there is no field signal data!!  
+                    phaseForApproach=fieldSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);
+                else 
+                    % Else, use simSigDataProvider
+                    phaseForApproach=simSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);
+                end
+                
+                % Initialization
+                estStateQueueApproach.Queue(estStateQueueApproach.Queue<0)=0;
+                estStateQueueApproachUpdate.CurrentQueue=zeros(size(estStateQueueApproach.Queue));
+                estStateQueueApproachUpdate.CurrentMoving=zeros(size(estStateQueueApproach.Queue));
+                
+                for i=1:length(estStateQueueApproach.Queue) % Loop for each queue/movement
+                    if(estStateQueueApproach.Queue(i)>0) % If the current movement has an average queue
+                       avgQueue=estStateQueueApproach.Queue(i);                       
+                       signalByMovement=phaseForApproach.SignalByMovement(i);
+                       headway=defaultParams.Headway;
+                       
+                       % Get the maximum and minimum numbers of queued
+                       % vehicles
+                       [maxNumVeh,minNumVeh,~]=initialization_in_aimsun.determine_max_min_vehicles...
+                           (avgQueue,signalByMovement,headway);
+                       
+                       % Assign the number of moving and queued vehicles
+                       % according to the signal settings
+                       [numVehQueue,numVehMoving]=initialization_in_aimsun.determine_queue_and_moving_vehicles...
+                           (maxNumVeh,minNumVeh,signalByMovement);
+                       
+                       estStateQueueApproachUpdate.CurrentQueue(i)=numVehQueue;
+                       estStateQueueApproachUpdate.CurrentMoving(i)=numVehMoving;
+                    end                    
+                end         
             end
+            
+        end
+        
+        function [numVehQueue,numVehMoving]=determine_queue_and_moving_vehicles...
+                (maxNumVeh,minNumVeh,signalByMovement)
+            %% This function is used to determine the numbers of moving and queued vehicles
+            
+            % Here we consider the number of vehicles inside this approach
+            % is the maxNumVeh. We try to determine the proportions of
+            % queued and moving vehicles based on the signal input
+            
+            % Get all the signal information
+            greenTime=signalByMovement.GreenTime;
+            redTime=signalByMovement.RedTime;
+            currentStatus=signalByMovement.CurrentStatus;
+            durationSinceActivated=signalByMovement.DurationSinceActivated;
+            
+            switch currentStatus % Check current status
+                case 'Green' % If it is green
+                    if(durationSinceActivated>greenTime)
+                        error('Incorrect signal settings: durationSinceActivated > greenTime! ')
+                    else                        
+                        proportion=durationSinceActivated/greenTime;   % Know the time elapse during the green phase                     
+                        numVehMoving=ceil((maxNumVeh-minNumVeh)*proportion); % Assign the number of moving vehicles
+                        numVehQueue=max(0,maxNumVeh-numVehMoving); % Assign the number of queued vehicles
+                    end
+                case 'Red'
+                    if(durationSinceActivated>redTime) % If it is red
+                        error('Incorrect signal settings: durationSinceActivated > redTime! ')
+                    else                        
+                        proportion=durationSinceActivated/redTime;  % Know the time elapse during the red phase                       
+                        numVehQueue=minNumVeh+ceil((maxNumVeh-minNumVeh)*proportion); % Assign the number of queued vehicles
+                        numVehMoving=max(0,maxNumVeh-numVehQueue); % Assign the number of moving vehicles
+                    end
+            end
+        end
+        
+        function [maxNumVeh,minNumVeh,GreenTimeUsed]=determine_max_min_vehicles(avgQueue,signal,headway)
+            %% This function is used to determine the maximun and the minimum numbers of vehicles
+            
+            greenTime=signal.GreenTime; % Get the green time
+            
+            numVehByGreen=ceil(greenTime/headway); % Get the number of vehicles that can pass through the green time
+            
+            % Get the minimum number of vehicles
+            if(numVehByGreen/2<avgQueue) % If the green time is not enough to clear all queued vehicles
+                minNumVeh=ceil((avgQueue*2-numVehByGreen)/2); % Residual queue
+                GreenTimeUsed=greenTime;    % Green time is fully used
+            else    
+                minNumVeh=0;    % No residual queue
+                GreenTimeUsed=ceil(avgQueue*2*headway); % Green time is not fully used
+            end
+            
+            % Get the maximum number of vehicles
+            maxNumVeh=min(numVehByGreen+minNumVeh,avgQueue*2);
             
         end
         

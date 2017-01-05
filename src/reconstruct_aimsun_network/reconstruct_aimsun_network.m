@@ -174,13 +174,30 @@ classdef reconstruct_aimsun_network
                     tmpAppForEstimation.intersection_name=networkData(i).JunctionName;
                     tmpAppForEstimation.intersection_id=networkData(i).JunctionID;
                     tmpAppForEstimation.city=networkData(i).City;
+                    tmpAppForEstimation.intersection_extID=networkData(i).JunctionExtID;
+                    tmpAppForEstimation.signalized=networkData(i).Signalized;
                     tmpAppForEstimation.road_name=networkData(i).FirstSectionName;
                     tmpAppForEstimation.direction=int2str(networkData(i).FirstSectionID);
+                    tmpAppForEstimation.road_extID=(networkData(i).FirstSectionExtID);
                     
                     tmpAppForEstimation.exclusive_left_turn=networkData(i).DetectorProperty.ExclusiveLeftTurn;
                     tmpAppForEstimation.exclusive_right_turn=networkData(i).DetectorProperty.ExclusiveRightTurn;
                     tmpAppForEstimation.advanced_detectors=networkData(i).DetectorProperty.AdvancedDetector;
                     tmpAppForEstimation.general_stopline_detectors=networkData(i).DetectorProperty.GeneralStoplineDetectors;
+                    
+                    % Get the turning movement indicator
+                    indicator=[0,0,0];
+                    for j=1:size(networkData(i).TurningBelongToApproach.TurningProperty)
+                        switch networkData(i).TurningBelongToApproach.TurningProperty(j).Description
+                            case 'Left Turn'
+                                indicator(1)=1;
+                            case 'Through'
+                                indicator(2)=1;
+                            case 'Right Turn'
+                                 indicator(3)=1;
+                        end
+                    end
+                    tmpAppForEstimation.turnIndicator=indicator;
                     
                     tmpAppForEstimation.link_properties=struct(...
                         'LinkLength',networkData(i).GeoDesign.LinkLength,...
@@ -294,7 +311,7 @@ classdef reconstruct_aimsun_network
                 DistanceToStopbar=[];
                 NumberOfLanes=[];
                 for i=1:size(tmpDetectorData,1)
-                    IDs=[IDs;tmpDetectorData(i).ExternalID];
+                    IDs=[IDs;num2str(tmpDetectorData(i).ExternalID)];
                     DetectorLength=[DetectorLength;tmpDetectorData(i).Length];
                     switch Type
                         case 'Advanced' % For advanced detectors, we need to know the distance to stopbar
@@ -327,6 +344,7 @@ classdef reconstruct_aimsun_network
             end
             
         end
+        
         function [NumOfLanes,NumOfDownstreamLanes,ExclusiveLeftTurn,ExclusiveRightTurn]=find_turning_pockets(SectionBelongToApproach,...
                 TurningBelongToApproach, LaneTurningProperty)
             
