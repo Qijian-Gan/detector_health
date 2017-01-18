@@ -62,20 +62,20 @@ guidata(hObject, handles);
 % uiwait(handles.figure1);
 axes(handles.axes1)
 matlabImage = imread(...
-    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\UC_Berkeley_Seal_80px.jpg');
+    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\test_network\UC_Berkeley_Seal_80px.jpg');
 image(matlabImage)
 axis off
 axis image
 axes(handles.axes2)
 matlabImage = imread(...
-    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\UCBerkeley_wordmark_gold.png');
+    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\test_network\UCBerkeley_wordmark_gold.png');
 image(matlabImage)
 axis off
 axis image
 
 axes(handles.axes3)
 matlabImage = imread(...
-    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\Path_logo_0.jpg');
+    'C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\scripts\GUI\test_network\Path_logo_0.jpg');
 image(matlabImage)
 axis off
 axis image
