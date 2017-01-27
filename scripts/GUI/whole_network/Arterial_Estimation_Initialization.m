@@ -116,19 +116,40 @@ disp('*******************************************************')
 % Input folder
 InputFolder=get(handles.OutputFolder,'String');
 if (strcmp(InputFolder,'Default'))
-    dp_network=load_aimsun_network_files; % With empty input: Default folder ('data\aimsun_networkData')
-else
-    dp_network=load_aimsun_network_files(InputFolder); % With empty input: Default folder ('data\aimsun_networkData')
+    % With empty input: Default folder ('data\aimsun_networkData_whole')
+    InputFolder=findFolder.aimsunNetwork_data_whole();
 end
+dp_network=load_aimsun_network_files(InputFolder); 
+
 % Junction input file
-JunctionInfFile=get(handles.JunctionInfFile,'String');     
-junctionData=dp_network.parse_junctionInf_txt(JunctionInfFile);
+if(exist(fullfile(InputFolder,'JunctionInf.txt'),'file')) 
+    junctionData=dp_network.parse_junctionInf_txt('JunctionInf.txt');
+else
+    error('Cannot file the junction information file in the folder!')
+end
+
 % Section input file
-SectionInfFile=get(handles.SectionInfFile,'String');   
-sectionData=dp_network.parse_sectionInf_txt(SectionInfFile);
+if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
+    sectionData=dp_network.parse_sectionInf_txt('SectionInf.txt');
+else
+    error('Cannot file the section information file in the folder!')
+end
+
 % Detector data file
-DetectorInfFile=get(handles.DetectorInfFile,'String');   
-detectorData=dp_network.parse_detectorInf_csv(DetectorInfFile);
+if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
+    detectorData=dp_network.parse_detectorInf_csv('DetectorInf.csv');
+else
+    error('Cannot file the detector information file in the folder!')
+end
+
+% Control plans
+if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
+    signalData=dp_network.parse_controlPlanInf_txt('ControlPlanInf.txt');
+else
+    error('Cannot file the detector information file in the folder!')
+end
+
+
 % Default signal settings
 DefaultSigInfFile=get(handles.DefaultSigInfFile,'String');  
 defaultSigSettingData=dp_network.parse_defaultSigSetting_csv(DefaultSigInfFile);
@@ -215,12 +236,14 @@ function RunInitialization_Callback(hObject, eventdata, handles)
 disp('*******************************************************')
 disp('***************Running State Initialization!***************')
 disp('*******************************************************')
+
 % Load the estStateQueue file
 dp_StateQueue=load_estStateQueue_data; % With empty input: Default folder ('data\estStateQueueData')
 estStateQueue=dp_StateQueue.parse_csv('aimsun_queue_estimated.csv',dp_StateQueue.folderLocation);
 
 % simVehicle data provider
-dp_vehicle=simVehicle_data_provider; 
+inputFolderLocation=findFolder.temp_aimsun_whole();
+dp_vehicle=simVehicle_data_provider(inputFolderLocation); 
 
 % simSignal data provider
 dp_signal_sim=simSignal_data_provider;
@@ -245,8 +268,10 @@ querySetting=struct(... % Query settings
 dp_initialization=initialization_in_aimsun(handles.recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan); % Currently missing field signal data provider
 vehicleList=dp_initialization.generate_vehicle(querySetting);
 
+outputLocation=findFolder.aimsun_initialization();
 set(handles.InitializationTable,'Data',vehicleList);
-dlmwrite('VehicleInfEstimation.csv', vehicleList, 'delimiter', ',', 'precision', 9); 
+% dlmwrite('VehicleInfEstimation.csv', vehicleList, 'delimiter', ',', 'precision', 9); 
+dlmwrite(fullfile(outputLocation,'VehicleInfEstimation.csv'), vehicleList, 'delimiter', ',', 'precision', 9); 
 
 
 % --- Executes on button press in RunAimsun.
@@ -257,8 +282,10 @@ function RunAimsun_Callback(hObject, eventdata, handles)
 
 FileLocation=get(handles.AimsunFileLocation,'String');
 NameOfPythonCode='AimsunReplication.py';
+AimsunFile=get(handles.AimsunProjectName,'String');
 ReplicationID=get(handles.ReplicationID,'String');
-dos(sprintf('aconsole.exe -script %s %s',fullfile(FileLocation,NameOfPythonCode),ReplicationID));
+dos(sprintf('aimsun.exe -script %s %s %s',fullfile(FileLocation,NameOfPythonCode),...
+    fullfile(FileLocation,AimsunFile),ReplicationID));
 
 % --- Executes on button press in ExtractAimsunNetwork.
 function ExtractAimsunNetwork_Callback(hObject, eventdata, handles)

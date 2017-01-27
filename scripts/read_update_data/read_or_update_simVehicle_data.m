@@ -6,7 +6,17 @@ close all
 %% Load the list of files to be updated
 % Load the list of files that have been read if it exists (saved in the 'Obj' folder)
 folderLocation=findFolder.objects;
-fileName=fullfile(folderLocation,'simVehicle_file_have_been_read.mat');
+
+scenario=2;
+if scenario==1 %Test case
+    fileName=fullfile(folderLocation,'simVehicle_file_have_been_read.mat');
+    folderLocation=findFolder.aimsunSimVehicle_data();
+    outputFolderLocation=findFolder.temp_aimsun();
+elseif scenario==2 %Whole network    
+    fileName=fullfile(folderLocation,'simVehicle_file_have_been_read_whole.mat');
+    folderLocation=findFolder.aimsunSimVehicle_data_whole();
+    outputFolderLocation=findFolder.temp_aimsun_whole();
+end
 
 if(exist(fileName,'file'))
     % If found
@@ -16,7 +26,7 @@ else
 end
 
 % Load the simVehicle data and get the list of files that is needed to be updated
-dp=load_simVehicle_data; % With empty input: Default folder ('data/simVehData')
+dp=load_simVehicle_data(folderLocation,outputFolderLocation); % With empty input: Default folder ('data/simVehData')
 fileList=dp.fileList; % Get the list of detector files
 
 %% Read the data

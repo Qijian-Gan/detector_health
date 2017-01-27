@@ -35,8 +35,16 @@ classdef findFolder
             x = fullfile(findFolder.root,'data\aimsun_simVehData');
         end
         
+        function [x] = aimsunSimVehicle_data_whole()
+            x = fullfile(findFolder.root,'data\aimsun_simVehData_whole');
+        end
+        
         function [x] = aimsunSimSignal_data()
             x = fullfile(findFolder.root,'data\aimsun_simSigData');
+        end
+        
+        function [x] = aimsunSimSignal_data_whole()
+            x = fullfile(findFolder.root,'data\aimsun_simSigData_whole');
         end
         
         function [x] = fieldSimSignal_data()
@@ -69,6 +77,14 @@ classdef findFolder
         
         function [x] = temp_aimsun()
             x = fullfile(findFolder.root,'temp_aimsun');
+        end
+        
+        function [x] = temp_aimsun_whole()
+            x = fullfile(findFolder.root,'temp_aimsun_whole');
+        end
+        
+        function [x] = aimsun_initialization()
+            x = fullfile(findFolder.root,'\data\aimsun_initialization');
         end
         
         function [x] = objects()

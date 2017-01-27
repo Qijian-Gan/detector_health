@@ -11,6 +11,7 @@ import csv
 import os
 
 model = GKSystem.getSystem().getActiveModel()
+gui=GKGUISystem.getGUISystem().getActiveGui()
 
 turnConfigFileName = 'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis' \
 						 '/detector_health/scripts/aimsun_model/whole_network/turn_movement_config.csv'
@@ -27,10 +28,6 @@ with open(turnConfigFileName, 'rb') as csvfile:
 
 for i in range(len(sectionFull)):
 	print("sectionID=%s, left=%s, through=%s, right=%s\n"%(sectionFull[i][0],sectionFull[i][1],sectionFull[i][2],sectionFull[i][3]))
-
-numJunction=0
-for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKNode")):
-	numJunction = numJunction+ len(types)
 
 for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKNode")):
 	for junctionObj in types.itervalues():
@@ -59,3 +56,5 @@ for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKNode"))
 							turnInfSection[t].setDescription('Through')
 						else: # The third movement
 							turnInfSection[t].setDescription('Right Turn')
+
+gui.save()

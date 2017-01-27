@@ -12,6 +12,7 @@ import os
 
 
 model = GKSystem.getSystem().getActiveModel()
+gui=GKGUISystem.getGUISystem().getActiveGui()
 
 detectorConfigFileName = 'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis' \
 						 '/detector_health/scripts/aimsun_model/whole_network/detector_movement_config.csv'
@@ -54,4 +55,4 @@ for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKDetecto
 		description=detectorObj.getDescription()
 		print ("detectorID=%d,detectorExtID=%s,Movement=%s"%(detectorID,detectorExtID,description))
 
-
+gui.save()

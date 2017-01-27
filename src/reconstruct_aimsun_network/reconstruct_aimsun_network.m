@@ -47,10 +47,8 @@ classdef reconstruct_aimsun_network
             
             junctionApproachData=[];
             for i=1:numJunctionNonlinear % Loop for each nonlinear junction
-                
                 numEntranceSections=junctionDataNonlinear(i).NumEntranceSection;
                 for j=1:numEntranceSections % Loop for each entrance section: approach
-                    
                     tmpJunctionApproachData.JunctionInf=junctionDataNonlinear(i); % Save the junction information for latter use
                     
                     % Get the junction name and ID
@@ -164,7 +162,7 @@ classdef reconstruct_aimsun_network
         
     end
     
-    methods ( Static)        
+    methods ( Static)
         
         function [appForEstimation]=get_approach_config_for_estimation(networkData)
             
@@ -188,13 +186,15 @@ classdef reconstruct_aimsun_network
                     % Get the turning movement indicator
                     indicator=[0,0,0];
                     for j=1:size(networkData(i).TurningBelongToApproach.TurningProperty)
-                        switch networkData(i).TurningBelongToApproach.TurningProperty(j).Description
-                            case 'Left Turn'
-                                indicator(1)=1;
-                            case 'Through'
-                                indicator(2)=1;
-                            case 'Right Turn'
-                                 indicator(3)=1;
+                        if(~isempty(networkData(i).TurningBelongToApproach.TurningProperty(j).Description))
+                            switch networkData(i).TurningBelongToApproach.TurningProperty(j).Description
+                                case 'Left Turn'
+                                    indicator(1)=1;
+                                case 'Through'
+                                    indicator(2)=1;
+                                case 'Right Turn'
+                                    indicator(3)=1;
+                            end
                         end
                     end
                     tmpAppForEstimation.turnIndicator=indicator;
@@ -216,7 +216,7 @@ classdef reconstruct_aimsun_network
                     
                     appForEstimation=[appForEstimation;tmpAppForEstimation];
                 end
-            end            
+            end
         end
         
         function [ExclusiveLeftTurn,ExclusiveRightTurn,AdvancedDetector,GeneralStoplineDetectors]=...
@@ -400,16 +400,27 @@ classdef reconstruct_aimsun_network
             
             tmp=strsplit(ExternalID,' ');
             
-            ID=str2num(tmp{1,2});
-            City=[];
-            County=[];
-            switch tmp{1,1}
-                case 'AR'
-                    City='Arcadia';
-                    County='Los Angeles';
-                case 'PA'
-                    City='Passadena';
-                    County='Los Angeles';
+            col=size(tmp,2);
+            if col~=2
+                ID=[];
+                City=[];
+                County=[];
+            else % Particular format: "City (Space) ID" 
+                ID=str2num(tmp{1,2});
+                City=[];
+                County=[];
+                switch tmp{1,1}
+                    case 'AR'
+                        City='Arcadia';
+                        County='Los Angeles';
+                    case 'PA'
+                        City='Passadena';
+                        County='Los Angeles';
+                    otherwise
+                        ID=[];
+                        City=[];
+                        County=[];
+                end
             end
             
         end

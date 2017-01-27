@@ -54,13 +54,14 @@ classdef initialization_in_aimsun
                 junctionSectionID=junctionSectionAll(i,:); % Get the junction-section ID
                 junctionSectionInf=this.networkData(i,:); % Get the junction-section Information
                 
-                idx=ismember(junctionSectionID,junctionSectionWithData,'rows'); % Check whether field estimates are available or not
+                [idx,loc]=ismember(junctionSectionID,junctionSectionWithData,'rows'); % Check whether field estimates are available or not
                 
                 % Get the statistics of the sections of that approach
                 [statisticsSection]=initialization_in_aimsun.get_vehicle_statistics_from_simulation...
                     (junctionSectionInf,this.simVehDataProvider,querySetting,CurrentTime);
                 
-                if(sum(idx)) % If the estimated traffic states and queues are available, use our proposed method
+                if(sum(idx)&& ~isempty(this.estStateQueue(loc).Status)) 
+                    % If the estimated traffic states and queues are available, use our proposed method
                     
                     % Get the estimated traffic states and queues
                     estStateQueueApproach=this.estStateQueue(ismember(junctionSectionWithData,junctionSectionID,'rows'),:);
@@ -77,8 +78,19 @@ classdef initialization_in_aimsun
                         (junctionSectionInf,estStateQueueApproachUpdate,statisticsSection,this.defaultParams);
                 else
                     % If the estimated traffic states and queues are not available, use the simulated results
-                    tmpVehicleList=initialization_in_aimsun.generate_vehicle_without_fieldEstimation...
-                        (junctionSectionInf,vertcat(statisticsSection.data),CurrentTime);
+                    data=[];                    
+                    for j=1:size(statisticsSection,1)
+                        if(~isnan(statisticsSection(j).data))
+                            data=[data;statisticsSection(j).data];
+                        end                         
+                    end
+                    
+                    if (isempty(data))
+                        tmpVehicleList=[];
+                    else
+                        tmpVehicleList=initialization_in_aimsun.generate_vehicle_without_fieldEstimation...
+                            (junctionSectionInf,data,CurrentTime);
+                    end
                 end
                 
                 vehicleList=[vehicleList;tmpVehicleList];
@@ -96,7 +108,7 @@ classdef initialization_in_aimsun
             
             estStateQueueApproachUpdate=estStateQueueApproach;
             
-            if(isempty(fieldSigDataProvider) && isempty(simSigDataProvider)) 
+            if(isempty(fieldSigDataProvider) && isempty(simSigDataProvider))
                 % If both fieldSigDataProvider and simSigDataProvider are not available
                 % Used some naive methods: 50-50 percent
                 estStateQueueApproach.Queue(estStateQueueApproach.Queue<0)=0;
@@ -106,9 +118,9 @@ classdef initialization_in_aimsun
                 % Movements are organized from left to right
                 if(~isempty(fieldSigDataProvider))
                     % Use fieldSigDataProvider if it exists
-                    % Currently  there is no field signal data!!  
+                    % Currently  there is no field signal data!!
                     phaseForApproach=fieldSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);
-                else 
+                else
                     % Else, use simSigDataProvider
                     phaseForApproach=simSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);
                 end
@@ -120,24 +132,24 @@ classdef initialization_in_aimsun
                 
                 for i=1:length(estStateQueueApproach.Queue) % Loop for each queue/movement
                     if(estStateQueueApproach.Queue(i)>0) % If the current movement has an average queue
-                       avgQueue=estStateQueueApproach.Queue(i);                       
-                       signalByMovement=phaseForApproach.SignalByMovement(i);
-                       headway=defaultParams.Headway;
-                       
-                       % Get the maximum and minimum numbers of queued
-                       % vehicles
-                       [maxNumVeh,minNumVeh,~]=initialization_in_aimsun.determine_max_min_vehicles...
-                           (avgQueue,signalByMovement,headway);
-                       
-                       % Assign the number of moving and queued vehicles
-                       % according to the signal settings
-                       [numVehQueue,numVehMoving]=initialization_in_aimsun.determine_queue_and_moving_vehicles...
-                           (maxNumVeh,minNumVeh,signalByMovement);
-                       
-                       estStateQueueApproachUpdate.CurrentQueue(i)=numVehQueue;
-                       estStateQueueApproachUpdate.CurrentMoving(i)=numVehMoving;
-                    end                    
-                end         
+                        avgQueue=estStateQueueApproach.Queue(i);
+                        signalByMovement=phaseForApproach.SignalByMovement(i);
+                        headway=defaultParams.Headway;
+                        
+                        % Get the maximum and minimum numbers of queued
+                        % vehicles
+                        [maxNumVeh,minNumVeh,~]=initialization_in_aimsun.determine_max_min_vehicles...
+                            (avgQueue,signalByMovement,headway);
+                        
+                        % Assign the number of moving and queued vehicles
+                        % according to the signal settings
+                        [numVehQueue,numVehMoving]=initialization_in_aimsun.determine_queue_and_moving_vehicles...
+                            (maxNumVeh,minNumVeh,signalByMovement);
+                        
+                        estStateQueueApproachUpdate.CurrentQueue(i)=numVehQueue;
+                        estStateQueueApproachUpdate.CurrentMoving(i)=numVehMoving;
+                    end
+                end
             end
             
         end
@@ -160,16 +172,16 @@ classdef initialization_in_aimsun
                 case 'Green' % If it is green
                     if(durationSinceActivated>greenTime)
                         error('Incorrect signal settings: durationSinceActivated > greenTime! ')
-                    else                        
-                        proportion=durationSinceActivated/greenTime;   % Know the time elapse during the green phase                     
+                    else
+                        proportion=durationSinceActivated/greenTime;   % Know the time elapse during the green phase
                         numVehMoving=ceil((maxNumVeh-minNumVeh)*proportion); % Assign the number of moving vehicles
                         numVehQueue=max(0,maxNumVeh-numVehMoving); % Assign the number of queued vehicles
                     end
                 case 'Red'
                     if(durationSinceActivated>redTime) % If it is red
                         error('Incorrect signal settings: durationSinceActivated > redTime! ')
-                    else                        
-                        proportion=durationSinceActivated/redTime;  % Know the time elapse during the red phase                       
+                    else
+                        proportion=durationSinceActivated/redTime;  % Know the time elapse during the red phase
                         numVehQueue=minNumVeh+ceil((maxNumVeh-minNumVeh)*proportion); % Assign the number of queued vehicles
                         numVehMoving=max(0,maxNumVeh-numVehQueue); % Assign the number of moving vehicles
                     end
@@ -187,7 +199,7 @@ classdef initialization_in_aimsun
             if(numVehByGreen/2<avgQueue) % If the green time is not enough to clear all queued vehicles
                 minNumVeh=ceil((avgQueue*2-numVehByGreen)/2); % Residual queue
                 GreenTimeUsed=greenTime;    % Green time is fully used
-            else    
+            else
                 minNumVeh=0;    % No residual queue
                 GreenTimeUsed=ceil(avgQueue*2*headway); % Green time is not fully used
             end
@@ -213,47 +225,52 @@ classdef initialization_in_aimsun
                 % Currently not used, but MAY be used the lane blockage information in the future
                 avgStatus=estStateQueueApproachUpdate.Status;
                 
-                % Get the numbers of queued and moving vehicles
-                CurrentQueue=estStateQueueApproachUpdate.CurrentQueue;
-                CurrentMoving=estStateQueueApproachUpdate.CurrentMoving;
-                
-                % First: assign vehicles with OD and lane
-                [vehQueueWithODAndLaneInitial]=initialization_in_aimsun.assign_vehicle_with_OD_and_Lane(junctionSectionInf,staticsSection,CurrentQueue);
-                [vehMovingWithODAndLaneInitial]=initialization_in_aimsun.assign_vehicle_with_OD_and_Lane(junctionSectionInf,staticsSection,CurrentMoving);
-                
-                % Second: assign vehicles to the corresponding links
-                status=0; % To see whether all vehicles are assigned or not
-                for i=1:5 % Threshold: is used to bound the gap for moving vehicles [jam_spacing, jam_spacing*threshold]
+                if(isempty(avgStatus)) % If no information is available
+                    fprintf('Warning: Lacking status and queue Information from simulations for Junction: %d--Section %d in the given time period!\n',JunctionID,SectionID);
                     tmpVehicleList=[];
-                    vehQueueWithODAndLane=vehQueueWithODAndLaneInitial;
-                    vehMovingWithODAndLane=vehMovingWithODAndLaneInitial;
+                else
+                    % Get the numbers of queued and moving vehicles
+                    CurrentQueue=estStateQueueApproachUpdate.CurrentQueue;
+                    CurrentMoving=estStateQueueApproachUpdate.CurrentMoving;
                     
-                    threshold=3-(i-1)*0.5;
-                    ListOfSections=junctionSectionInf.SectionBelongToApproach.ListOfSections; % Get the list of sections
-                    numSections=length(ListOfSections);
-                    for sectionAdd=1:numSections % Loop for sections from downstream to upstream
-                        [tmpVehicleListBySection,restVehQueueWithODAndLane,restVehMovingWithODAndLane]=...
-                            initialization_in_aimsun.assign_vehicle_to_one_section(avgStatus,vehQueueWithODAndLane,...
-                            vehMovingWithODAndLane,junctionSectionInf,staticsSection,defaultParams,sectionAdd,threshold);
+                    % First: assign vehicles with OD and lane
+                    [vehQueueWithODAndLaneInitial]=initialization_in_aimsun.assign_vehicle_with_OD_and_Lane(junctionSectionInf,staticsSection,CurrentQueue);
+                    [vehMovingWithODAndLaneInitial]=initialization_in_aimsun.assign_vehicle_with_OD_and_Lane(junctionSectionInf,staticsSection,CurrentMoving);
+                    
+                    % Second: assign vehicles to the corresponding links
+                    status=0; % To see whether all vehicles are assigned or not
+                    for i=1:5 % Threshold: is used to bound the gap for moving vehicles [jam_spacing, jam_spacing*threshold]
+                        tmpVehicleList=[];
+                        vehQueueWithODAndLane=vehQueueWithODAndLaneInitial;
+                        vehMovingWithODAndLane=vehMovingWithODAndLaneInitial;
                         
-                        tmpVehicleList=[tmpVehicleList;tmpVehicleListBySection];
+                        threshold=3-(i-1)*0.5;
+                        ListOfSections=junctionSectionInf.SectionBelongToApproach.ListOfSections; % Get the list of sections
+                        numSections=length(ListOfSections);
+                        for sectionAdd=1:numSections % Loop for sections from downstream to upstream
+                            [tmpVehicleListBySection,restVehQueueWithODAndLane,restVehMovingWithODAndLane]=...
+                                initialization_in_aimsun.assign_vehicle_to_one_section(avgStatus,vehQueueWithODAndLane,...
+                                vehMovingWithODAndLane,junctionSectionInf,staticsSection,defaultParams,sectionAdd,threshold);
+                            
+                            tmpVehicleList=[tmpVehicleList;tmpVehicleListBySection];
+                            
+                            if(isempty(restVehQueueWithODAndLane)&& isempty(restVehMovingWithODAndLane)) % If all vehicles are assigned
+                                status=1; % Set the status to be one and break
+                                break;
+                            else % If not, try to assign the rest of vehicles to the upstream links
+                                vehQueueWithODAndLane=restVehQueueWithODAndLane;
+                                vehMovingWithODAndLane=restVehMovingWithODAndLane;
+                            end
+                        end
                         
-                        if(isempty(restVehQueueWithODAndLane)&& isempty(restVehMovingWithODAndLane)) % If all vehicles are assigned
-                            status=1; % Set the status to be one and break
-                            break;
-                        else % If not, try to assign the rest of vehicles to the upstream links
-                            vehQueueWithODAndLane=restVehQueueWithODAndLane;
-                            vehMovingWithODAndLane=restVehMovingWithODAndLane;
+                        if(status==1) % After looping for all sections, check the status
+                            break; % If all vehicles are assigned, break; else, reduce the threshold and try again
                         end
                     end
                     
-                    if(status==1) % After looping for all sections, check the status
-                        break; % If all vehicles are assigned, break; else, reduce the threshold and try again
+                    if(status==0) % After trying all thresholds, if we still have unassigned vehicles, display the warning!
+                        sprintf('Warning: There are still vehicles unassigned for Intersection: %d --Section: %d\n', JunctionID, SectionID);
                     end
-                end
-                
-                if(status==0) % After trying all thresholds, if we still have unassigned vehicles, display the warning!
-                    sprintf('Warning: There are still vehicles unassigned for Intersection: %d --Section: %d\n', JunctionID, SectionID);
                 end
             end
         end
@@ -320,24 +337,24 @@ classdef initialization_in_aimsun
             % Lanes ordered from left to right: ID from N, N-1, ..., 1
             numLanes=junctionSectionInf.SectionBelongToApproach.Property(sectionAdd).NumLanes;
             laneLengths=junctionSectionInf.SectionBelongToApproach.Property(sectionAdd).LaneLengths;
-            rearBoundaryByLane=[(numLanes:-1:1)',laneLengths,zeros(numLanes,1)];            
-                        
+            rearBoundaryByLane=[(numLanes:-1:1)',laneLengths,zeros(numLanes,1)];
+            
             %*********Step 1: Assign positions and speeds for queued vehicles if
             % exist
             [tmpVehicleList,vehQueueWithODAndLane,rearBoundaryByLane]=initialization_in_aimsun.assign_vehicles...
                 (tmpVehicleList,rearBoundaryByLane,'Queued',vehQueueWithODAndLane,numLanes,defaultParams,sectionAdd,junctionSectionInf,staticsSection,threshold);
             
             %++++++++++++++++Step 2: Assign positions and speeds for moving
-            %vehicles if there is enough space   
+            %vehicles if there is enough space
             [tmpVehicleList,vehMovingWithODAndLane,rearBoundaryByLane]=initialization_in_aimsun.assign_vehicles...
                 (tmpVehicleList,rearBoundaryByLane,'Moving',vehMovingWithODAndLane,numLanes,defaultParams,sectionAdd,junctionSectionInf,staticsSection,threshold);
-
+            
         end
         
         function [tmpVehicleList,vehWithODAndLane,rearBoundaryByLane]=assign_vehicles...
                 (tmpVehicleList,rearBoundaryByLane,type,vehWithODAndLane,numLanes,defaultParams,sectionAdd,junctionSectionInf,staticsSection,threshold)
-            %% This function is used to assign vehicles (either queued or moving) according to their predefined lanes and the road geometry 
-
+            %% This function is used to assign vehicles (either queued or moving) according to their predefined lanes and the road geometry
+            
             % Get the speed information within the given section: sectionAdd
             speedInf=staticsSection(sectionAdd).speedLane;
             lanesBySpeed=[speedInf.laneID]';
@@ -356,7 +373,7 @@ classdef initialization_in_aimsun
                         speeds=[];
                     end
                     clear idx
-                
+                    
                     % Selected by lane
                     tmpSelectedVehicleByLane=vehWithODAndLane(vehWithODAndLane(:,2)==laneID,:);
                     
@@ -372,14 +389,14 @@ classdef initialization_in_aimsun
                         
                         if(rearBoundaryByLane(i,2)<=rearBoundaryByLane(i,3)+spacing) % Reach the upstream boundary of the section
                             break; % Exit
-                        else % Else, have enough space                            
+                        else % Else, have enough space
                             tmpVehicleList=[tmpVehicleList;[selectedVehicleByLane(j,1:end-1),...
                                 max(rearBoundaryByLane(:,2))-rearBoundaryByLane(i,3)-spacing/2,speed,0]]; % Vehicle is not tracked
                             rearBoundaryByLane(i,3)=rearBoundaryByLane(i,3)+spacing;
                             
                             % Clear the vehicle that has been assigned with position and speed
                             [~,idx]=ismember(selectedVehicleByLane(j,:),vehWithODAndLane,'rows');
-                            vehWithODAndLane(idx,:)=[]; 
+                            vehWithODAndLane(idx,:)=[];
                             clear idx
                         end
                     end
@@ -400,7 +417,7 @@ classdef initialization_in_aimsun
                         for j=1:size(LaneTurningProperty,1)
                             for k=1:length(LaneTurningProperty(j).TurnMovements) %There may be multiple turns within one lane
                                 if(LaneTurningProperty(j).TurnMovements(k)==turnID)
-                                  laneIDsByTurn=[laneIDsByTurn,LaneTurningProperty(j).LaneID];
+                                    laneIDsByTurn=[laneIDsByTurn,LaneTurningProperty(j).LaneID];
                                 end
                             end
                         end
@@ -429,7 +446,7 @@ classdef initialization_in_aimsun
                                 % Still have space in other lanes and
                                 % vehicles
                                 [spacing,speed]=initialization_in_aimsun.get_a_speed(type,defaultParams,threshold,speeds);
-                                idx=(rearBoundaryByLane(:,1)==laneID);    
+                                idx=(rearBoundaryByLane(:,1)==laneID);
                                 if(j<=size(vehWithODAndLaneByTurn,1) && ...
                                         rearBoundaryByLane(idx,2)>rearBoundaryByLane(idx,3)+spacing)
                                     tmpVehicleList=[tmpVehicleList;...
@@ -440,7 +457,7 @@ classdef initialization_in_aimsun
                                     % Clear the vehicle that has been assigned with position and speed
                                     clear idx
                                     [~,idx]=ismember(vehWithODAndLaneByTurn(j,:),vehWithODAndLane,'rows');
-                                    vehWithODAndLane(idx,:)=[]; 
+                                    vehWithODAndLane(idx,:)=[];
                                     j=j+1;
                                     succeed=1;
                                 end
@@ -503,7 +520,7 @@ classdef initialization_in_aimsun
                             vehWithODAndLaneByTurn=vehWithODAndLane(idx,:); % Get the corresponding set of vehicles
                             clear idx
                             
-                            if(~isempty(vehWithODAndLaneByTurn)) % If it is not empty                                
+                            if(~isempty(vehWithODAndLaneByTurn)) % If it is not empty
                                 laneID=turnWithAdjacentLane(i,2); % Get the lane information
                                 % Get the speed information for a given lane
                                 [~,idx]=ismember(laneID,lanesBySpeed);
@@ -526,8 +543,8 @@ classdef initialization_in_aimsun
                                     
                                     % Clear the vehicle that has been assigned with position and speed
                                     [~,idx]=ismember(vehWithODAndLaneByTurn(1,:),vehWithODAndLane,'rows');
-                                    vehWithODAndLane(idx,:)=[]; 
-                                    succeed=1;                                    
+                                    vehWithODAndLane(idx,:)=[];
+                                    succeed=1;
                                 end
                             end
                         end
@@ -544,30 +561,30 @@ classdef initialization_in_aimsun
                             if(laneID==1) % Rightmost lane, search left
                                 for j=2:numLanes
                                     if(isFullLane(numLanes-j+1))
-                                      vehWithODAndLane(i,2)=j;
-                                      break;
+                                        vehWithODAndLane(i,2)=j;
+                                        break;
                                     end
                                 end
                             elseif(laneID==numLanes) % Leftmost lane, search left
                                 for j=numLanes-1:-1:1
                                     if(isFullLane(numLanes-j+1))
-                                      vehWithODAndLane(i,2)=j;
-                                      break;
+                                        vehWithODAndLane(i,2)=j;
+                                        break;
                                     end
                                 end
                             else
                                 % Searching left
                                 for j=laneID+1:numLanes
                                     if(isFullLane(numLanes-j+1))
-                                      leftAdjacentLane=j;
-                                      break;
+                                        leftAdjacentLane=j;
+                                        break;
                                     end
                                 end
                                 % Searching right
                                 for j=laneID-1:-1:1
                                     if(isFullLane(numLanes-j+1))
-                                      rightAdjacentLane=j;
-                                      break;
+                                        rightAdjacentLane=j;
+                                        break;
                                     end
                                 end
                                 idx=(rand()<=0.5);
@@ -582,7 +599,7 @@ classdef initialization_in_aimsun
         
         function [vehWithODAndLane]=reassign_turns_and_lanes(junctionSectionInf,sectionAdd,vehWithODAndLane)
             %% This function is used to reassign turns and lanes to the vehicles remained unassigned from the previous section
-        
+            
             % Get the property of the current section
             curSectionProperty=junctionSectionInf.SectionBelongToApproach.Property(sectionAdd);
             
@@ -621,7 +638,7 @@ classdef initialization_in_aimsun
                 vehWithODAndLane(i,2)=curLane;
                 vehWithODAndLane(i,end)=curTurnID;
             end
-        
+            
         end
         
         function [spacing,speed]=get_a_speed(type,defaultParams,threshold,speeds)
@@ -680,7 +697,7 @@ classdef initialization_in_aimsun
                 [~,idx]=ismember(rightAdjacentLane,rearBoundaryByLane(:,1)); % Search for the index
                 if(maxCurrentQueueBoundary<rearBoundaryByLane(idx,2)&&... % Maximum queue boundary is smaller than the lane boundary
                         rearBoundaryByLane(idx,end)< rearBoundaryByLane(idx,2)) % and that lane is Not full
-                    adjacentLaneID=[adjacentLaneID;rightAdjacentLane];                    
+                    adjacentLaneID=[adjacentLaneID;rightAdjacentLane];
                 end
             end
             
@@ -694,7 +711,7 @@ classdef initialization_in_aimsun
             end
             
         end
-          
+        
         function [tmpVehicleList]=generate_vehicle_without_fieldEstimation(junctionSectionInf,data,CurrentTime)
             % This function is used to generate vehicles for the approach
             % without estimated states and queues from the field

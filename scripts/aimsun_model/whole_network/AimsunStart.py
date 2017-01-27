@@ -44,8 +44,7 @@ def main(argv):
         # Call to extract Signal information
         if int(argv[7]) == 1:
             print 'Extract signal information!'
-
-
+            ExtractControlPlanInformation(model, outputLocation)
 
         print 'Done with network extraction!'
         print 'Exit the Aimsun model!'
@@ -58,8 +57,8 @@ def ExtractJunctionInformation(model,outputLocation):
 
     #####################Get the junction information#####################
     junctionInfFileName=outputLocation+'\JunctionInf.txt'
-    print junctionInfFileName
-    junctionInfFile = open(junctionInfFileName, 'a')
+    #print junctionInfFileName
+    junctionInfFile = open(junctionInfFileName, 'w')
 
     # Get the number of nodes
     numJunction=0
@@ -109,15 +108,25 @@ def ExtractJunctionInformation(model,outputLocation):
 
             # Write the turn information
             junctionInfFile.write(
-                "Turning movements:turnID,origSectionID,destSectionID,origFromLane,origToLane,destFromLane,destToLane, description\n")
+                "Turning movements:turnID,origSectionID,destSectionID,origFromLane,origToLane,destFromLane,destToLane, description, turn speed\n")
             for j in range(numTurn):
                 turnObj = turns[j]
                 origin=turnObj.getOrigin()
                 destination=turnObj.getDestination()
-                junctionInfFile.write("%i,%i,%i,%i,%i,%i,%i,%s\n" % (
-                    turnObj.getId(), origin.getId(), destination.getId(), turnObj.getOriginFromLane(),
-                    turnObj.getOriginToLane(), turnObj.getDestinationFromLane(), turnObj.getDestinationToLane(),
-                    turnObj.getDescription()))
+
+                originObj = model.getCatalog().find(origin.getId())  # Get the section object
+                numLanesOrigin=len(originObj.getLanes())
+                destinationObj = model.getCatalog().find(destination.getId())  # Get the section object
+                numLanesDest = len(destinationObj.getLanes())
+
+                # FromLane: leftmost lane number (GKTurning)/ rightmost lane number (API/our definition)
+                # ToLane: rightmost lane number /leftmost lane number (API/our definition)
+                # Note: lanes are organized from right to left in our output!!
+                # It is different from the definition in the GKSection function
+                junctionInfFile.write("%i,%i,%i,%i,%i,%i,%i,%s,%i\n" % (
+                    turnObj.getId(), origin.getId(), destination.getId(), numLanesOrigin-turnObj.getOriginToLane(),
+                    numLanesOrigin-turnObj.getOriginFromLane(),numLanesDest-turnObj.getDestinationToLane(),
+                    numLanesDest-turnObj.getDestinationFromLane(), turnObj.getDescription(),turnObj.getSpeed()*0.621371))
 
             # Write the turn orders by section from left to right
             junctionInfFile.write(
@@ -137,7 +146,7 @@ def ExtractSectionInformation(model,outputLocation):
 
     ####################Get the section information#####################
     sectionInfFileName=outputLocation+'\SectionInf.txt'
-    sectionInfFile = open(sectionInfFileName, 'a')
+    sectionInfFile = open(sectionInfFileName, 'w')
 
     # Get the number of sections
     numSection=0
@@ -182,7 +191,7 @@ def ExtractDetectorInformation(model,outputLocation):
 
     ####################Get the detector information#####################
     detectorInfFileName = outputLocation+'\DetectorInf.csv'
-    detectorInfFile = open(detectorInfFileName, 'a')
+    detectorInfFile = open(detectorInfFileName, 'w')
 
     # Get the number of detectors
     numDetector = 0
@@ -199,18 +208,129 @@ def ExtractDetectorInformation(model,outputLocation):
             description = detectorObj.getDescription()  # Get the description
 
             startPos = detectorObj.getPosition() * 3.28084
-            endPos = startPos - detectorObj.getLength() * 3.28084
+            endPos = startPos + detectorObj.getLength() * 3.28084
             section = detectorObj.getSection()
+            sectionObj = model.getCatalog().find(section.getId())  # Get the section object
+            numLanes = len(sectionObj.getLanes())
 
             if (detectorExtID.isEmpty()):
                 detectorExtID='NA'
             if (description.isEmpty()):
                 description = 'NA'
 
+            # Note: lanes are labeled from rightmost to leftmost in our output file
+            # FromLane: leftmost lane number (GKTurning)/ rightmost lane number (API/our definition)
+            # ToLane: rightmost lane number /leftmost lane number (API/our definition)
             detectorInfFile.write('%d,%s,%d,%s,%d,%d,%.4f,%.4f\n' % (
-                detectorID, detectorExtID, section.getId(), description, detectorObj.getFromLane(),
-                detectorObj.getToLane(), startPos, endPos))
+                detectorID, detectorExtID, section.getId(), description,
+                numLanes-detectorObj.getToLane(), numLanes-detectorObj.getFromLane(),startPos, endPos))
     return 0
+
+def ExtractControlPlanInformation(model,outputLocation):
+    # Creat and open the output file
+    ControlPlanFileName = outputLocation + '\ControlPlanInf.txt'
+    ControlPlanFile = open(ControlPlanFileName, 'w')
+
+    # Load the model
+    model = GKSystem.getSystem().getActiveModel()
+
+    # Get the total number of control plans
+    numControlPlans = 0
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKControlPlan")):
+        numControlPlans = numControlPlans + len(types)
+    print numControlPlans
+    ControlPlanFile.write('Number of control plans:\n')
+    ControlPlanFile.write(('%i\n') % numControlPlans)
+    ControlPlanFile.write('\n')
+
+    # Loop for each control plan
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKControlPlan")):
+        for plan in types.itervalues():
+            planID = plan.getId()  # Get the plan ID
+            planExtID = plan.getExternalId()  # Get the external ID
+            planName = plan.getName()  # Get name of the control plan
+            # print (("ID=%i, ExtID=%s, Name=%s \n")% (planID, planExtID, planName))
+            controlJunctions = plan.getControlJunctions()
+            # print len(controlJunctions)
+            ControlPlanFile.write('Plan ID, Plan ExtID, Plan Name, Number of control junction:\n')
+            ControlPlanFile.write(("%i,%s,%s,%i \n") % (planID, planExtID, planName, len(controlJunctions)))
+
+            if len(controlJunctions) == 0:  # This may happen for Ramp Metering
+                ControlPlanFile.write('\n')
+                continue
+
+            # Loop for each control junction
+            for junction in controlJunctions.itervalues():
+                # Get the junction information
+                node = junction.getNode()
+                id = node.getId()
+                name = node.getName()
+                # print (("ID=%i, ExtID=%s, Name=%s ,Junction ID=%i, Junction Name=%s \n") % (planID, planExtID, planName, id, name))
+
+                controlType = junction.getControlJunctionType()  # 0: Unspecified; 1: Uncontrolled; 2: FixedControl; 3: External; 4: Actuated
+                if controlType == 0:
+                    type = 'Unspecified'
+                elif controlType == 1:
+                    type = 'Uncontrolled'
+                elif controlType == 2:
+                    type = 'FixedControl'
+                elif controlType == 3:
+                    type = 'External'
+                else:
+                    type = 'Actuated'
+
+                offset = junction.getOffset()  # Get the offset
+                numBarriers = junction.getNbBarriers()  # Get the number of barriers
+                cycle = junction.getCycle()  # Get the cycle and the actual cycle
+                numRings = junction.getNbRings()  # Get the number of rings
+                phases = junction.getPhases()  # Get the phase information
+                numPhases = len(phases)
+                signalInJunction = node.getSignals()  # Get the signal information
+                numSignals = len(signalInJunction)
+                ControlPlanFile.write(
+                    'Junction ID, Junction Name, Control Type, Offset(s), NumBarriers, Cycle(s),NumRings,NumPhases,numSignals:\n')
+                ControlPlanFile.write(("%i,%s,%s,%i,%i,%i,%i,%i,%i \n") % (
+                id, name, type, offset, numBarriers, cycle, numRings, numPhases, numSignals))
+
+                ##########Extract the phaseInRing information ###################
+                ControlPlanFile.write(
+                    'Phase ID, Ring ID, StartTime(s), Duration(s), isInterphase(1/0), permissiveStartTime(s),permissiveEndTime,numSignalInPhase,phaseSignalID[...]:\n')
+                for i in range(numPhases):
+                    phaseRing = []
+
+                    phaseIDInCycle = phases[i].getId()  # Get the phase ID in the cycle
+                    phaseInRing = phases[i].getIdRing()  # Get the corresponding ring ID
+                    startTime = phases[i].getFrom()  # Get the starting time of the phase
+                    duration = phases[i].getDuration()  # Get the phase duration
+                    isInterphase = phases[i].getInterphase()  # Determine whether the phase is an interphase or not
+                    permissiveStartTime = phases[i].getPermissivePeriodFrom()  # Get the permissive starting time
+                    permissiveEndTime = phases[i].getPermissivePeriodTo()  # Get the permissive ending time
+
+                    phaseSignals = phases[i].getSignals()
+                    numSignalInPhase = len(phaseSignals)
+                    phaseSignalID = []
+
+                    phaseRing = str(phaseIDInCycle) + ',' + str(phaseInRing) + ',' + str(startTime) + ',' + str(
+                        duration) + ',' + str(isInterphase) \
+                                + ',' + str(permissiveStartTime) + ',' + str(permissiveEndTime) + ',' + str(
+                        numSignalInPhase)
+                    for j in range(numSignalInPhase):
+                        phaseRing = phaseRing + ',' + str(phaseSignals[j].signal)
+                    ControlPlanFile.write(('%s\n') % phaseRing)
+
+                ##########Extract the signalTurning information ###################
+                ControlPlanFile.write(
+                    'Signal ID, NumTurnings, Turning IDS[] :\n')
+                for i in range(numSignals):
+                    signalTurning = []
+                    signalID = signalInJunction[i].getId()
+                    turnings = signalInJunction[i].getTurnings()
+                    numTurnings = len(turnings)
+                    signalTurning = str(signalID) + ',' + str(numTurnings)
+                    for j in range(numTurnings):
+                        signalTurning = signalTurning + ',' + str(turnings[j].getId())
+                    ControlPlanFile.write(('%s\n') % signalTurning)
+            ControlPlanFile.write("\n")
 
 
 main(sys.argv)
