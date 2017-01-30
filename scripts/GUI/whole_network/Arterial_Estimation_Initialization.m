@@ -22,7 +22,7 @@ function varargout = Arterial_Estimation_Initialization(varargin)
 
 % Edit the above text to modify the response to help Arterial_Estimation_Initialization
 
-% Last Modified by GUIDE v2.5 17-Jan-2017 10:39:35
+% Last Modified by GUIDE v2.5 30-Jan-2017 11:22:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -100,6 +100,36 @@ function varargout = Arterial_Estimation_Initialization_OutputFcn(hObject, event
 % Get default command line output from handles structure
 varargout{1} = handles.output;
 
+% --- Executes on button press in ExtractAimsunNetwork.
+function ExtractAimsunNetwork_Callback(hObject, eventdata, handles)
+% hObject    handle to ExtractAimsunNetwork (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+FileLocation=get(handles.AimsunFileLocation,'String');
+NameOfPythonCode='AimsunStart.py';
+AimsunFile=get(handles.AimsunProjectName,'String');
+JunctionYes=handles.JunctionYes.Value;
+SectionYes=handles.SectionYes.Value;
+DetectorYes=handles.DetectorYes.Value;
+SignalYes=handles.SignalYes.Value;
+
+switch handles.OutputFolder.String
+    case 'Default'
+        OutputFolder=findFolder.aimsunNetwork_data_whole();
+    otherwise
+        OutputFolder=handles.OutputFolder.String;
+end
+system(sprintf('aimsun.exe -script %s %s %d %d %d %d %s',fullfile(FileLocation,NameOfPythonCode),...
+    fullfile(FileLocation,AimsunFile),JunctionYes,SectionYes,DetectorYes,SignalYes,OutputFolder));
+disp('Aimsun model is opened!')
+
+% --- Executes on button press in NetworkReconstruction.
+function NetworkReconstruction_Callback(hObject, eventdata, handles)
+% hObject    handle to NetworkReconstruction (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
 
 % --- Executes on button press in RunEstimation.
 function RunEstimation_Callback(hObject, eventdata, handles)
@@ -108,7 +138,6 @@ function RunEstimation_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 clc 
-
 disp('*******************************************************')
 disp('***************Running State Estimation!***************')
 disp('*******************************************************')
@@ -243,11 +272,11 @@ handles.recAimsunNet=recAimsunNet;
 guidata(hObject, handles)
 set(handles.EstimationTable,'Data',Table);
 
-% --- Executes on button press in pushbutton2.
-function pushbutton2_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+% % --- Executes on button press in pushbutton2.
+% function pushbutton2_Callback(hObject, eventdata, handles)
+% % hObject    handle to pushbutton2 (see GCBO)
+% % eventdata  reserved - to be defined in a future version of MATLAB
+% % handles    structure with handles and user data (see GUIDATA)
 
 % --- Executes on button press in RunInitialization.
 function RunInitialization_Callback(hObject, eventdata, handles)
@@ -255,6 +284,7 @@ function RunInitialization_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+clc 
 disp('*******************************************************')
 disp('***************Running State Initialization!***************')
 disp('*******************************************************')
@@ -309,29 +339,6 @@ ReplicationID=get(handles.ReplicationID,'String');
 dos(sprintf('aimsun.exe -script %s %s %s',fullfile(FileLocation,NameOfPythonCode),...
     fullfile(FileLocation,AimsunFile),ReplicationID));
 
-% --- Executes on button press in ExtractAimsunNetwork.
-function ExtractAimsunNetwork_Callback(hObject, eventdata, handles)
-% hObject    handle to ExtractAimsunNetwork (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-FileLocation=get(handles.AimsunFileLocation,'String');
-NameOfPythonCode='AimsunStart.py';
-AimsunFile=get(handles.AimsunProjectName,'String');
-JunctionYes=handles.JunctionYes.Value;
-SectionYes=handles.SectionYes.Value;
-DetectorYes=handles.DetectorYes.Value;
-SignalYes=handles.SignalYes.Value;
-
-switch handles.OutputFolder.String
-    case 'Default'
-        OutputFolder=findFolder.aimsunNetwork_data_whole();
-    otherwise
-        OutputFolder=handles.OutputFolder.String;
-end
-system(sprintf('aimsun.exe -script %s %s %d %d %d %d %s',fullfile(FileLocation,NameOfPythonCode),...
-    fullfile(FileLocation,AimsunFile),JunctionYes,SectionYes,DetectorYes,SignalYes,OutputFolder));
-disp('Aimsun model is opened!')
 
 function AimsunFileLocation_Callback(hObject, eventdata, handles)
 % hObject    handle to AimsunFileLocation (see GCBO)
@@ -896,3 +903,4 @@ function InputFolder_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
