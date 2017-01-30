@@ -25,10 +25,11 @@ with open(detectorConfigFileName, 'rb') as csvfile:
 	spamreader = csv.reader(csvfile, delimiter=',')
 	next(spamreader, None)
 	for row in spamreader:
-		intID=int(row[0])
-		sensorID=int(row[1])
-		detectorIDFull.append(intID*100+sensorID)
-		movements.append(str(row[2]))
+		if row[0] !="":
+			intID=int(row[0])
+			sensorID=int(row[1])
+			detectorIDFull.append(intID*100+sensorID)
+			movements.append(str(row[2]))
 
 #for i in range(len(detectorIDFull)):
 #	print("IntID=%s, Movement=%s\n"%(detectorIDFull[i],movements[i]))
@@ -37,7 +38,7 @@ with open(detectorConfigFileName, 'rb') as csvfile:
 numDetector = 0
 for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKDetector")):
 	numDetector = numDetector + len(types)
-print numDetector
+#print numDetector
 
 for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKDetector")):
 	for detectorObj in types.itervalues():

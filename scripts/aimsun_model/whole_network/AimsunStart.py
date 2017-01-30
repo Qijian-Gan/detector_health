@@ -10,6 +10,8 @@ import sys
 import csv
 import os
 
+DefaultAngle=8
+
 def main(argv):
     if len(argv)<9:
         print "Usage: aimsun.exe -script %s ANG_FILE" % argv[2]
@@ -46,6 +48,8 @@ def main(argv):
             print 'Extract signal information!'
             ExtractControlPlanInformation(model, outputLocation)
 
+        gui.save()
+
         print 'Done with network extraction!'
         print 'Exit the Aimsun model!'
         gui.closeDocument(model)
@@ -59,6 +63,8 @@ def ExtractJunctionInformation(model,outputLocation):
     junctionInfFileName=outputLocation+'\JunctionInf.txt'
     #print junctionInfFileName
     junctionInfFile = open(junctionInfFileName, 'w')
+
+    global DefaultAngle
 
     # Get the number of nodes
     numJunction=0
@@ -106,6 +112,9 @@ def ExtractJunctionInformation(model,outputLocation):
                 junctionInfFile.write(("%i,") % exitSections[j].getId())
             junctionInfFile.write(("%i\n") % exitSections[numExitSections - 1].getId())
 
+            ## Update the turning description
+            UpdateTurningDescription(numEntranceSections, entranceSections, junctionObj, DefaultAngle)
+
             # Write the turn information
             junctionInfFile.write(
                 "Turning movements:turnID,origSectionID,destSectionID,origFromLane,origToLane,destFromLane,destToLane, description, turn speed\n")
@@ -119,14 +128,15 @@ def ExtractJunctionInformation(model,outputLocation):
                 destinationObj = model.getCatalog().find(destination.getId())  # Get the section object
                 numLanesDest = len(destinationObj.getLanes())
 
+                turnAngle=turnObj.calcAngleBridge()
                 # FromLane: leftmost lane number (GKTurning)/ rightmost lane number (API/our definition)
                 # ToLane: rightmost lane number /leftmost lane number (API/our definition)
                 # Note: lanes are organized from right to left in our output!!
                 # It is different from the definition in the GKSection function
-                junctionInfFile.write("%i,%i,%i,%i,%i,%i,%i,%s,%i\n" % (
+                junctionInfFile.write("%i,%i,%i,%i,%i,%i,%i,%s,%i,%.4f\n" % (
                     turnObj.getId(), origin.getId(), destination.getId(), numLanesOrigin-turnObj.getOriginToLane(),
                     numLanesOrigin-turnObj.getOriginFromLane(),numLanesDest-turnObj.getDestinationToLane(),
-                    numLanesDest-turnObj.getDestinationFromLane(), turnObj.getDescription(),turnObj.getSpeed()*0.621371))
+                    numLanesDest-turnObj.getDestinationFromLane(), turnObj.getDescription(),turnObj.getSpeed()*0.621371,turnAngle))
 
             # Write the turn orders by section from left to right
             junctionInfFile.write(
@@ -141,6 +151,46 @@ def ExtractJunctionInformation(model,outputLocation):
                 junctionInfFile.write(string)
             junctionInfFile.write("\n")
     return 0
+
+def UpdateTurningDescription(numEntranceSections,entranceSections,junctionObj,DefaultAngle):
+
+    for j in range(numEntranceSections):
+        turnInfSection = junctionObj.getFromTurningsOrderedFromLeftToRight(entranceSections[j])
+        # Get the minumum angle
+        #Returns the angle, in degrees, between the last segment of the origin section and
+        #  the turn line. When going clockwise the angle will be negative and when going
+        # counterclockwise the angle will be positive
+        curAddr = 0
+        minAngle = abs(turnInfSection[0].calcAngleBridge())
+        for k in range(len(turnInfSection)):
+            if(minAngle>abs(turnInfSection[k].calcAngleBridge())):
+                curAddr=k
+                minAngle = abs(turnInfSection[k].calcAngleBridge())
+
+        if minAngle <=DefaultAngle: # Through movement
+            turnInfSection[curAddr].setDescription('Through')
+            for t in range(curAddr): # Set turns on the left to be Left Turn
+                turnInfSection[t].setDescription('Left Turn')
+            for t in range(len(turnInfSection)-curAddr-1): # Set turns on the right to be Right Turn
+                turnInfSection[t+curAddr+1].setDescription('Right Turn')
+        else:
+            if len(turnInfSection)==3:
+                # It is possible for some special case that Through movement has
+                # a big turning angle, then Overwrite it
+                turnInfSection[0].setDescription('Left Turn')
+                turnInfSection[1].setDescription('Through')
+                turnInfSection[2].setDescription('Right Turn')
+
+            elif (turnInfSection[curAddr].calcAngleBridge()>DefaultAngle):
+                for t in range(curAddr+1): # Set turns on the left to be Left Turn
+                    turnInfSection[t].setDescription('Left Turn')
+                for t in range(len(turnInfSection)-curAddr-1): # Set turns on the right to be Right Turn
+                    turnInfSection[t+curAddr+1].setDescription('Right Turn')
+            elif (turnInfSection[curAddr].calcAngleBridge()<-DefaultAngle):
+                for t in range(curAddr): # Set turns on the left to be Left Turn
+                    turnInfSection[t].setDescription('Left Turn')
+                for t in range(len(turnInfSection)-curAddr): # Set turns on the right to be Right Turn
+                    turnInfSection[t+curAddr].setDescription('Right Turn')
 
 def ExtractSectionInformation(model,outputLocation):
 

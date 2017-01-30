@@ -210,6 +210,18 @@ classdef sensor_count_provider
                 useMedian=0;
             end
             
+            %% There may be more than 288 points
+            idx=[];
+            for i=1:size(dataFile,1)
+                if(size(dataFile(i).data.time,2)~=288)
+                    idx=[idx;false];
+                else
+                    idx=[idx;true];
+                end
+            end   
+            dataFile=dataFile(logical(idx),:);
+            report=report(logical(idx),:);
+            
             if (isempty(report)) % No corresponding data
                 data_out=DetectorDataProfile;
                 status={'No Data'};
@@ -217,7 +229,7 @@ classdef sensor_count_provider
                 % Only use healthy data
                 idx=(report(:,end)==1);
                 
-                if (sum(idx)==0) % No good data
+                if (sum(idx)==0) % No good data                    
                     data=vertcat(dataFile(1:end).data);
                     
                     data_out=sensor_count_provider.get_time_of_day_data(data,timeOfDay,useMedian);                    

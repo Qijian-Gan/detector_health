@@ -86,8 +86,8 @@ classdef simVehicle_data_provider
                         
                         % Get the proportion of stopped vehicles
                         numInterval=length(unique(tmp_data(:,1)));
-                        queue.proportion=sum(tmp_data(:,end))/length(tmp_data(:,end)); 
-                        queue.avgNumVehicle=length(tmp_data(:,end))/numInterval;
+                        queue.proportion=sum(tmp_data(:,14))/length(tmp_data(:,14)); 
+                        queue.avgNumVehicle=length(tmp_data(:,14))/numInterval;
                         queue.avgNumQueue=queue.proportion*queue.avgNumVehicle;
                              
                         queueLane=[];
@@ -95,7 +95,7 @@ classdef simVehicle_data_provider
                             data_lane=tmp_data(tmp_data(:,6)==lanes(j),:);
                             queueLane=[queueLane; struct(...
                                 'laneID',lanes(j),...
-                                'proportion',sum(data_lane(:,end))/length(data_lane(:,end)))];
+                                'proportion',sum(data_lane(:,14))/length(data_lane(:,14)))];
                         end      
                         
                         % Check turning proportions: aggregated level

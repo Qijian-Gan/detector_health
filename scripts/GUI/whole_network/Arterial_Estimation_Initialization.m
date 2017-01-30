@@ -127,6 +127,9 @@ if(exist(fullfile(InputFolder,'JunctionInf.txt'),'file'))
 else
     error('Cannot file the junction information file in the folder!')
 end
+disp('************************************')
+disp('Junction Information is loaded!')
+disp('************************************')
 
 % Section input file
 if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
@@ -134,6 +137,9 @@ if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
 else
     error('Cannot file the section information file in the folder!')
 end
+disp('************************************')
+disp('Section Information is loaded!')
+disp('************************************')
 
 % Detector data file
 if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
@@ -141,6 +147,9 @@ if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
 else
     error('Cannot file the detector information file in the folder!')
 end
+disp('************************************')
+disp('Detector Information is loaded!')
+disp('************************************')
 
 % Control plans
 if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
@@ -148,19 +157,32 @@ if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
 else
     error('Cannot file the detector information file in the folder!')
 end
-
+disp('************************************')
+disp('Control Plan Information is loaded!')
+disp('************************************')
 
 % Default signal settings
 DefaultSigInfFile=get(handles.DefaultSigInfFile,'String');  
 defaultSigSettingData=dp_network.parse_defaultSigSetting_csv(DefaultSigInfFile);
+disp('************************************')
+disp('Default Signal Information is loaded!')
+disp('************************************')
+
 % Midlink config data
 MidlinkCountInfFile=get(handles.MidlinkCountInfFile,'String');  
 midlinkConfigData=dp_network.parse_midlinkCountConfig_csv(MidlinkCountInfFile);
+disp('************************************')
+disp('Midlink Configuration is loaded!')
+disp('************************************')
 
 %% Reconstruct the Aimsun network
 recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,midlinkConfigData,nan);
 % Reconstruct the network
 recAimsunNet.networkData=recAimsunNet.reconstruction();
+disp('************************************')
+disp('Network is reconstructed!')
+disp('************************************')
+
 % Generate the configuration of approaches for traffic state estimation
 appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
 

@@ -217,7 +217,7 @@ classdef initialization_in_aimsun
             SectionID=junctionSectionInf.FirstSectionID;
             
             
-            if(any(any(isnan(vertcat(staticsSection.data))))) % If no simulation data
+            if(isnan(staticsSection(1).data)) % If no simulation data
                 fprintf('Warning: Lacking OD Information from simulations for Junction: %d--Section %d in the given time period!\n',JunctionID,SectionID);
                 tmpVehicleList=[];
                 % Not enough information, e.g., OD information, and thus return []
