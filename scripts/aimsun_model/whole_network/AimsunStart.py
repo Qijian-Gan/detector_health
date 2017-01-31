@@ -301,9 +301,13 @@ def ExtractControlPlanInformation(model,outputLocation):
             planName = plan.getName()  # Get name of the control plan
             # print (("ID=%i, ExtID=%s, Name=%s \n")% (planID, planExtID, planName))
             controlJunctions = plan.getControlJunctions()
+            controlPlanOffset=plan.getOffset()
+            #print ("ID=%d,Offset=%d"%(planID,controlPlanOffset))
+
             # print len(controlJunctions)
-            ControlPlanFile.write('Plan ID, Plan ExtID, Plan Name, Number of control junction:\n')
-            ControlPlanFile.write(("%i,%s,%s,%i \n") % (planID, planExtID, planName, len(controlJunctions)))
+            ControlPlanFile.write('Plan ID, Plan ExtID, Plan Name, Number of control junction, Plan Offset:\n')
+            ControlPlanFile.write(("%i,%s,%s,%i,%i \n") %
+                                  (planID, planExtID, planName, len(controlJunctions),controlPlanOffset))
 
             if len(controlJunctions) == 0:  # This may happen for Ramp Metering
                 ControlPlanFile.write('\n')
@@ -380,7 +384,24 @@ def ExtractControlPlanInformation(model,outputLocation):
                     for j in range(numTurnings):
                         signalTurning = signalTurning + ',' + str(turnings[j].getId())
                     ControlPlanFile.write(('%s\n') % signalTurning)
-            ControlPlanFile.write("\n")
 
+                ##########Extract the coordination information ###################
+                ControlPlanFile.write(
+                    'Ring ID, Coordinated Phase, Offset, getMatchesOffsetWithEndOfPhase :\n')
+                for i in range (numRings):
+                    coordinatedPhase=junction.getCoordinatedPhase(i+1)
+                    # For actuated junctions with coordinated phases, the coordinated
+                    # point can be the end of the coordinated phase (true) or the
+                    # beginning of the coordinated phase (false)
+                    if(coordinatedPhase is None):
+                        phaseID=-1
+                        offset=-1
+                        matchOffsetWithEndOfPhase=-1
+                    else:
+                        phaseID=coordinatedPhase.getId()
+                        offset=junction.getOffset()
+                        matchOffsetWithEndOfPhase=junction.getMatchesOffsetWithEndOfPhase()
+                    ControlPlanFile.write(('%i,%i,%i,%i\n') % (i+1,phaseID,offset,matchOffsetWithEndOfPhase))
+            ControlPlanFile.write("\n")
 
 main(sys.argv)

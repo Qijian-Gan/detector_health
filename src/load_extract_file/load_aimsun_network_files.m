@@ -184,7 +184,7 @@ classdef load_aimsun_network_files
                 
                 tmpData=struct(...
                     'DetectorID',                       str2num(tmp{1,1}{1,1}),...
-                    'ExternalID',                       str2num(tmp{1,1}{2,1}),...
+                    'ExternalID',                       (tmp{1,1}{2,1}),...
                     'SectionID',                        str2num(tmp{1,1}{3,1}),...
                     'Description',                      tmp{1,1}{4,1},...
                     'FirstLane',                        str2num(tmp{1,1}{5,1}),...
@@ -288,6 +288,7 @@ classdef load_aimsun_network_files
                 PlanExtID=tmp{1,1}{2,1};
                 PlanName=tmp{1,1}{3,1};
                 NumOfControlJunction=str2double(tmp{1,1}{4,1});
+                PlanOffset=str2double(tmp{1,1}{5,1});
                 
                 dataControlJunction=load_aimsun_network_files.dataFormatControlPlanJunction();
                 for j=1:NumOfControlJunction
@@ -297,6 +298,8 @@ classdef load_aimsun_network_files
                     dataControlJunction.PlanID=PlanID;
                     dataControlJunction.PlanExtID=PlanExtID;
                     dataControlJunction.PlanName=PlanName;
+                    dataControlJunction.PlanOffset=PlanOffset;
+                    
                     dataControlJunction.JunctionID=str2double(tmp{1,1}{1,1});
                     dataControlJunction.JunctionName=(tmp{1,1}{2,1});
                     dataControlJunction.ControlType=(tmp{1,1}{3,1});
@@ -345,6 +348,23 @@ classdef load_aimsun_network_files
                         dataControlJunction.Signals=[dataControlJunction.Signals;signalSetting];
                     end                    
                    
+                    % Loop for all rings
+                    tline=fgetl(fileID); % Ignore the first line
+                    coordinationSetting=[];
+                    for k=1:dataControlJunction.NumRings                        
+                        tline=fgetl(fileID);
+                        tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                        
+                        tmpCoordSetting=struct(...
+                            'RingID',           str2double(tmp{1,1}{1,1}),...
+                            'PhaseID',          str2double(tmp{1,1}{2,1}),...
+                            'PhaseOffset',      str2double(tmp{1,1}{3,1}),...
+                            'FromEndOfPhase',   str2double(tmp{1,1}{4,1}));
+                        
+                        coordinationSetting=[coordinationSetting;tmpCoordSetting];
+                    end      
+                    dataControlJunction.Coordination=coordinationSetting;
+                    
                     data=[data;dataControlJunction];
                 end
                 

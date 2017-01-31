@@ -22,7 +22,7 @@ function varargout = Arterial_Estimation_Initialization(varargin)
 
 % Edit the above text to modify the response to help Arterial_Estimation_Initialization
 
-% Last Modified by GUIDE v2.5 30-Jan-2017 11:22:16
+% Last Modified by GUIDE v2.5 30-Jan-2017 12:00:34
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -114,11 +114,11 @@ SectionYes=handles.SectionYes.Value;
 DetectorYes=handles.DetectorYes.Value;
 SignalYes=handles.SignalYes.Value;
 
-switch handles.OutputFolder.String
+switch handles.InputFolder.String
     case 'Default'
         OutputFolder=findFolder.aimsunNetwork_data_whole();
     otherwise
-        OutputFolder=handles.OutputFolder.String;
+        OutputFolder=handles.InputFolder.String;
 end
 system(sprintf('aimsun.exe -script %s %s %d %d %d %d %s',fullfile(FileLocation,NameOfPythonCode),...
     fullfile(FileLocation,AimsunFile),JunctionYes,SectionYes,DetectorYes,SignalYes,OutputFolder));
@@ -129,6 +129,92 @@ function NetworkReconstruction_Callback(hObject, eventdata, handles)
 % hObject    handle to NetworkReconstruction (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+clc 
+disp('*******************************************************')
+disp('***************Reconstructing the network!***************')
+disp('*******************************************************')
+
+%% Load the network information file
+% Input folder
+InputFolder=get(handles.InputFolder,'String');
+if (strcmp(InputFolder,'Default'))
+    % With empty input: Default folder ('data\aimsun_networkData_whole')
+    InputFolder=findFolder.aimsunNetwork_data_whole();
+end
+dp_network=load_aimsun_network_files(InputFolder); 
+
+% Junction input file
+if(exist(fullfile(InputFolder,'JunctionInf.txt'),'file')) 
+    junctionData=dp_network.parse_junctionInf_txt('JunctionInf.txt');
+else
+    error('Cannot find the junction information file in the folder!')
+end
+disp('************************************')
+disp('Junction Information is loaded!')
+disp('************************************')
+
+% Section input file
+if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
+    sectionData=dp_network.parse_sectionInf_txt('SectionInf.txt');
+else
+    error('Cannot find the section information file in the folder!')
+end
+disp('************************************')
+disp('Section Information is loaded!')
+disp('************************************')
+
+% Detector data file
+if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
+    detectorData=dp_network.parse_detectorInf_csv('DetectorInf.csv');
+else
+    error('Cannot find the detector information file in the folder!')
+end
+disp('************************************')
+disp('Detector Information is loaded!')
+disp('************************************')
+
+% Control plans
+if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
+    controlPlanAimsun=dp_network.parse_controlPlanInf_txt('ControlPlanInf.txt');
+else
+    error('Cannot find the control plan information file in the folder!')
+end
+disp('************************************')
+disp('Control Plan Information is loaded!')
+disp('************************************')
+
+% Default signal settings
+DefaultSigInfFile=get(handles.DefaultSigInfFile,'String');
+if(exist(DefaultSigInfFile,'file'))
+    defaultSigSettingData=dp_network.parse_defaultSigSetting_csv(DefaultSigInfFile);
+else
+    error('Cannot find the default signal information file in the folder!')
+end
+disp('************************************')
+disp('Default Signal Information is loaded!')
+disp('************************************')
+
+% Midlink config data
+MidlinkCountInfFile=get(handles.MidlinkCountInfFile,'String');  
+if(exist(MidlinkCountInfFile,'file'))
+    midlinkConfigData=dp_network.parse_midlinkCountConfig_csv(MidlinkCountInfFile);
+else
+    error('Cannot find the midlink configuration information file in the folder!')
+end
+disp('************************************')
+disp('Midlink Configuration is loaded!')
+disp('************************************')
+
+%% Reconstruct the Aimsun network
+recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,midlinkConfigData,controlPlanAimsun,nan);
+% Reconstruct the network
+recAimsunNet.networkData=recAimsunNet.reconstruction();
+outputFolder=findFolder.objects();
+save(fullfile(outputFolder,'recAimsunNet.mat'),'recAimsunNet')
+save(fullfile(outputFolder,'netInputFiles.mat'),'junctionData','sectionData','detectorData','controlPlanAimsun')
+disp('************************************')
+disp('Network is reconstructed!')
+disp('************************************')
 
 
 % --- Executes on button press in RunEstimation.
@@ -141,76 +227,9 @@ clc
 disp('*******************************************************')
 disp('***************Running State Estimation!***************')
 disp('*******************************************************')
-%% Load the network information file
-% Input folder
-InputFolder=get(handles.OutputFolder,'String');
-if (strcmp(InputFolder,'Default'))
-    % With empty input: Default folder ('data\aimsun_networkData_whole')
-    InputFolder=findFolder.aimsunNetwork_data_whole();
-end
-dp_network=load_aimsun_network_files(InputFolder); 
 
-% Junction input file
-if(exist(fullfile(InputFolder,'JunctionInf.txt'),'file')) 
-    junctionData=dp_network.parse_junctionInf_txt('JunctionInf.txt');
-else
-    error('Cannot file the junction information file in the folder!')
-end
-disp('************************************')
-disp('Junction Information is loaded!')
-disp('************************************')
-
-% Section input file
-if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
-    sectionData=dp_network.parse_sectionInf_txt('SectionInf.txt');
-else
-    error('Cannot file the section information file in the folder!')
-end
-disp('************************************')
-disp('Section Information is loaded!')
-disp('************************************')
-
-% Detector data file
-if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
-    detectorData=dp_network.parse_detectorInf_csv('DetectorInf.csv');
-else
-    error('Cannot file the detector information file in the folder!')
-end
-disp('************************************')
-disp('Detector Information is loaded!')
-disp('************************************')
-
-% Control plans
-if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
-    signalData=dp_network.parse_controlPlanInf_txt('ControlPlanInf.txt');
-else
-    error('Cannot file the detector information file in the folder!')
-end
-disp('************************************')
-disp('Control Plan Information is loaded!')
-disp('************************************')
-
-% Default signal settings
-DefaultSigInfFile=get(handles.DefaultSigInfFile,'String');  
-defaultSigSettingData=dp_network.parse_defaultSigSetting_csv(DefaultSigInfFile);
-disp('************************************')
-disp('Default Signal Information is loaded!')
-disp('************************************')
-
-% Midlink config data
-MidlinkCountInfFile=get(handles.MidlinkCountInfFile,'String');  
-midlinkConfigData=dp_network.parse_midlinkCountConfig_csv(MidlinkCountInfFile);
-disp('************************************')
-disp('Midlink Configuration is loaded!')
-disp('************************************')
-
-%% Reconstruct the Aimsun network
-recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,midlinkConfigData,nan);
-% Reconstruct the network
-recAimsunNet.networkData=recAimsunNet.reconstruction();
-disp('************************************')
-disp('Network is reconstructed!')
-disp('************************************')
+inputFolder=findFolder.objects();
+load(fullfile(inputFolder,'recAimsunNet.mat'))
 
 % Generate the configuration of approaches for traffic state estimation
 appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
@@ -903,4 +922,3 @@ function InputFolder_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
