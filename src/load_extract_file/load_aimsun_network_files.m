@@ -372,6 +372,32 @@ classdef load_aimsun_network_files
             end
             
         end
+        
+        function [data]=parse_masterControlPlanInf_txt(this,masterControlPlanFile)
+            % This function is to parse the txt file of master control plan information
+            
+            % Open the file
+            fileID = fopen(fullfile(this.folderLocation,masterControlPlanFile));
+            
+            tline=fgetl(fileID); % Ignore the first line
+            
+            data=[];
+            tline=fgetl(fileID); % Get the second line: number of sections
+            while(tline>0)
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                data=[data;struct(...
+                    'MasterPlanID',     str2double(tmp{1,1}{1,1}),...
+                    'Name',             (tmp{1,1}{2,1}),...
+                    'ControlPlanID',    str2double(tmp{1,1}{3,1}),...
+                    'StartingTime',     str2double(tmp{1,1}{4,1}),...
+                    'Duration',         str2double(tmp{1,1}{5,1}),...
+                    'ZoneID',           str2double(tmp{1,1}{6,1}))];
+                
+                tline=fgetl(fileID); % Get the next line
+%                 disp(tline)
+            end
+
+        end
     end
     
     methods ( Static)

@@ -7,7 +7,8 @@ classdef reconstruct_aimsun_network
         detectorData            % Data that contains detector information
         defaultSigSetting       % Data that contains default signal settings
         midlinkCountConfig      % Configuration file that can be used to access the midlink counts
-        controlPlanAimsun       % Control plan loaded in Aimsun     
+        controlPlanAimsun       % Control plan loaded in Aimsun   
+        masterControlPlanAimsun % Master control plan loaded in Aimsun
         
         networkData             % Data that contains both junction and section information (reconstructed)
         
@@ -17,7 +18,8 @@ classdef reconstruct_aimsun_network
     
     methods ( Access = public )
         
-        function [this]=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSetting,midlinkCountConfig,controlPlanAimsun,outputFolder)
+        function [this]=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSetting,...
+                midlinkCountConfig,controlPlanAimsun,masterControlPlanAimsun,outputFolder)
             %% This function is to reconstruct the aimsun network
             
             this.junctionData=junctionData;
@@ -26,6 +28,7 @@ classdef reconstruct_aimsun_network
             this.defaultSigSetting=defaultSigSetting;
             this.midlinkCountConfig=midlinkCountConfig;
             this.controlPlanAimsun=controlPlanAimsun;
+            this.masterControlPlanAimsun=masterControlPlanAimsun;
             
             if(~isnan(outputFolder))
                 this.outputFolderLocation=outputFolder;
@@ -49,6 +52,7 @@ classdef reconstruct_aimsun_network
             
             junctionApproachData=[];
             junctionIDAll=[this.controlPlanAimsun.JunctionID]';
+            planIDAll=[this.masterControlPlanAimsun.ControlPlanID]';
             
             for i=1:numJunctionNonlinear % Loop for each nonlinear junction
                 numEntranceSections=junctionDataNonlinear(i).NumEntranceSection;
@@ -63,6 +67,17 @@ classdef reconstruct_aimsun_network
                     PlanOffset=[tmpControlPlanBelongJunction.PlanOffset]';
                     [~,I]=sort(PlanOffset);
                     ControlPlanBelongJunction=tmpControlPlanBelongJunction(I,:);
+                    
+                    for j=1:size(ControlPlanBelongJunction,1) % Loop for each control plan
+                        planID=ControlPlanBelongJunction(j).PlanID;
+                        
+                        idx=ismember(planIDAll,planID);                        
+                        if(sum(idx)) % Get the master plan information
+                            ControlPlanBelongJunction(j).MasterPlan=this.masterControlPlanAimsun(idx,:);
+                        else
+                            ControlPlanBelongJunction(j).MasterPlan=[];
+                        end
+                    end
                 end
                 
                 for j=1:numEntranceSections % Loop for each entrance section: approach

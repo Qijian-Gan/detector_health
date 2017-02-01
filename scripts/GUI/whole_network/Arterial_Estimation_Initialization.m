@@ -22,7 +22,7 @@ function varargout = Arterial_Estimation_Initialization(varargin)
 
 % Edit the above text to modify the response to help Arterial_Estimation_Initialization
 
-% Last Modified by GUIDE v2.5 30-Jan-2017 12:00:34
+% Last Modified by GUIDE v2.5 31-Jan-2017 10:49:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -81,11 +81,13 @@ axis image
 
 % Output the table formats
 handles.EstimationTable.ColumnName = {'Junction ID','Junction Name','Junction ExtID','Signalized',...
-                'Direction (Section ID)','Section Name','Section ExtID','Time',...
-                'Left Turn Status','Through movement Status','Right Turn Status',...
-                'Left Turn Queue','Through movement Queue','Right Turn Queue'};
+    'Direction (Section ID)','Section Name','Section ExtID','Time',...
+    'Left Turn Status','Through movement Status','Right Turn Status',...
+    'Left Turn Queue','Through movement Queue','Right Turn Queue'};
 handles.InitializationTable.ColumnName = {'Aimsun Section ID','Lane ID','Vehicle Type','Origin ID',...
-                'Destination ID','Distance To End (ft)','Speed (mph)','Track Or Not'};
+    'Destination ID','Distance To End (ft)','Speed (mph)','Track Or Not'};
+handles.PhaseDeterminationTable.ColumnName = {'Aimsun Junction ID','Junction Name','Junction ExtID','Signalized',...
+    'Control Plan ID','Control Type','Cycle Length','Current Aimsun Phase ID', 'Time Has Been Activated'};
 % Resize the figure
 set(handles.figure1,'Units','Pixels','Position',get(0,'ScreenSize'))
  
@@ -183,6 +185,17 @@ disp('************************************')
 disp('Control Plan Information is loaded!')
 disp('************************************')
 
+% Master Control plans
+if(exist(fullfile(InputFolder,'MasterControlPlanInf.txt'),'file'))
+    masterControlPlanAimsun=dp_network.parse_masterControlPlanInf_txt('MasterControlPlanInf.txt');
+else
+    error('Cannot find the master control plan information file in the folder!')
+end
+disp('************************************')
+disp('Master Control Plan Information is loaded!')
+disp('************************************')
+
+
 % Default signal settings
 DefaultSigInfFile=get(handles.DefaultSigInfFile,'String');
 if(exist(DefaultSigInfFile,'file'))
@@ -206,12 +219,15 @@ disp('Midlink Configuration is loaded!')
 disp('************************************')
 
 %% Reconstruct the Aimsun network
-recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,midlinkConfigData,controlPlanAimsun,nan);
+recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,...
+    midlinkConfigData,controlPlanAimsun,masterControlPlanAimsun,nan);
+
 % Reconstruct the network
 recAimsunNet.networkData=recAimsunNet.reconstruction();
 outputFolder=findFolder.objects();
 save(fullfile(outputFolder,'recAimsunNet.mat'),'recAimsunNet')
-save(fullfile(outputFolder,'netInputFiles.mat'),'junctionData','sectionData','detectorData','controlPlanAimsun')
+save(fullfile(outputFolder,'netInputFiles.mat'),'junctionData',...
+    'sectionData','detectorData','controlPlanAimsun','masterControlPlanAimsun')
 disp('************************************')
 disp('Network is reconstructed!')
 disp('************************************')
@@ -343,6 +359,55 @@ outputLocation=findFolder.aimsun_initialization();
 set(handles.InitializationTable,'Data',vehicleList);
 % dlmwrite('VehicleInfEstimation.csv', vehicleList, 'delimiter', ',', 'precision', 9); 
 dlmwrite(fullfile(outputLocation,'VehicleInfEstimation.csv'), vehicleList, 'delimiter', ',', 'precision', 9); 
+
+% --- Executes on button press in RunPhaseDetermination.
+function RunPhaseDetermination_Callback(hObject, eventdata, handles)
+% hObject    handle to RunPhaseDetermination (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
+DayConfig=get(handles.DayConfig,'String');
+SelectedDayID=find(ismember(days,DayConfig)==1);
+if(SelectedDayID==1 || (SelectedDayID>=3 && SelectedDayID<=7) || SelectedDayID==9) % Use the weekday 
+    masterPlanName='Weekday';
+else
+    masterPlanName='Weekend';
+end
+
+controlPlanAimsun=handles.recAimsunNet.controlPlanAimsun;
+masterControlPlanAimsun=handles.recAimsunNet.masterControlPlanAimsun;
+
+% Select the corresponding master control plans
+masterPlanNameAll={masterControlPlanAimsun.Name}';
+currentTime=str2double(get(handles.TimeStampConfig,'String'))*3600;
+startingTime=[masterControlPlanAimsun.StartingTime]';
+duration=[masterControlPlanAimsun.Duration]';
+endingTime=startingTime+duration;
+
+idx=(ismember(masterPlanNameAll,masterPlanName) &...
+    (startingTime<=currentTime & endingTime>currentTime));
+candidateControlPlan=masterControlPlanAimsun(idx,:);
+
+% Get the detailed information of the control plans
+PlanIDAll=[controlPlanAimsun.PlanID]';
+PlanPhaseDetermined=[];
+if (~isempty(candidateControlPlan))
+    controlPlans=[];
+    for i=1:size(candidateControlPlan,1)
+        PhaseID=candidateControlPlan(i).ControlPlanID;
+        idx=ismember(PlanIDAll,PhaseID);
+        if(sum(idx)==0)
+            fprintf('Control Plan ID: %d is not for traffic signal!\n',PhaseID)
+        else
+            controlPlans=[controlPlans;controlPlanAimsun(idx,:)];
+        end
+    end
+end
+
+
+
+set(handles.PhaseDeterminationTable,'Data',PlanPhaseDetermined);
 
 
 % --- Executes on button press in RunAimsun.
@@ -922,3 +987,4 @@ function InputFolder_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
