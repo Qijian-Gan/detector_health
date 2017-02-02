@@ -22,7 +22,7 @@ function varargout = Arterial_Estimation_Initialization(varargin)
 
 % Edit the above text to modify the response to help Arterial_Estimation_Initialization
 
-% Last Modified by GUIDE v2.5 31-Jan-2017 10:49:36
+% Last Modified by GUIDE v2.5 01-Feb-2017 10:59:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -86,12 +86,11 @@ handles.EstimationTable.ColumnName = {'Junction ID','Junction Name','Junction Ex
     'Left Turn Queue','Through movement Queue','Right Turn Queue'};
 handles.InitializationTable.ColumnName = {'Aimsun Section ID','Lane ID','Vehicle Type','Origin ID',...
     'Destination ID','Distance To End (ft)','Speed (mph)','Track Or Not'};
-handles.PhaseDeterminationTable.ColumnName = {'Aimsun Junction ID','Junction Name','Junction ExtID','Signalized',...
-    'Control Plan ID','Control Type','Cycle Length','Current Aimsun Phase ID', 'Time Has Been Activated'};
+handles.PhaseDeterminationTable.ColumnName = {'Aimsun JunctionID','Aimsun Control Plan ID','Control Type','Cycle Length',...
+    'Coordinated','Ring ID','Aimsun Phase ID','Phase ID In Cycle', 'Time Has Been Activated'};
 % Resize the figure
 set(handles.figure1,'Units','Pixels','Position',get(0,'ScreenSize'))
- 
-
+                                     
 % --- Outputs from this function are returned to the command line.
 function varargout = Arterial_Estimation_Initialization_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -133,7 +132,7 @@ function NetworkReconstruction_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 clc 
 disp('*******************************************************')
-disp('***************Reconstructing the network!***************')
+disp('***************Network Reconstruction!***************')
 disp('*******************************************************')
 
 %% Load the network information file
@@ -151,9 +150,9 @@ if(exist(fullfile(InputFolder,'JunctionInf.txt'),'file'))
 else
     error('Cannot find the junction information file in the folder!')
 end
-disp('************************************')
-disp('Junction Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 1/8: Loading the Junction Information!')
+disp('*********************************************')
 
 % Section input file
 if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
@@ -161,9 +160,9 @@ if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
 else
     error('Cannot find the section information file in the folder!')
 end
-disp('************************************')
-disp('Section Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 2/8: Loading the Section Information!')
+disp('*********************************************')
 
 % Detector data file
 if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
@@ -171,9 +170,9 @@ if(exist(fullfile(InputFolder,'DetectorInf.csv'),'file'))
 else
     error('Cannot find the detector information file in the folder!')
 end
-disp('************************************')
-disp('Detector Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 3/8: Loading the Detector Information!')
+disp('*********************************************')
 
 % Control plans
 if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
@@ -181,9 +180,9 @@ if(exist(fullfile(InputFolder,'ControlPlanInf.txt'),'file'))
 else
     error('Cannot find the control plan information file in the folder!')
 end
-disp('************************************')
-disp('Control Plan Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 4/8: Loading the Control Plans!')
+disp('*********************************************')
 
 % Master Control plans
 if(exist(fullfile(InputFolder,'MasterControlPlanInf.txt'),'file'))
@@ -191,9 +190,9 @@ if(exist(fullfile(InputFolder,'MasterControlPlanInf.txt'),'file'))
 else
     error('Cannot find the master control plan information file in the folder!')
 end
-disp('************************************')
-disp('Master Control Plan Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 5/8: Loading the Master Control Plan!')
+disp('*********************************************')
 
 
 % Default signal settings
@@ -203,9 +202,9 @@ if(exist(DefaultSigInfFile,'file'))
 else
     error('Cannot find the default signal information file in the folder!')
 end
-disp('************************************')
-disp('Default Signal Information is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 6/8: Loading the Default Signal Settings!')
+disp('*********************************************')
 
 % Midlink config data
 MidlinkCountInfFile=get(handles.MidlinkCountInfFile,'String');  
@@ -214,11 +213,15 @@ if(exist(MidlinkCountInfFile,'file'))
 else
     error('Cannot find the midlink configuration information file in the folder!')
 end
-disp('************************************')
-disp('Midlink Configuration is loaded!')
-disp('************************************')
+disp('*********************************************')
+disp('Step 7/8: Loading the Midlink Configuration!')
+disp('*********************************************')
 
 %% Reconstruct the Aimsun network
+disp('*********************************************')
+disp('Step 8/8: Reconstructing the Network!')
+disp('*********************************************')
+
 recAimsunNet=reconstruct_aimsun_network(junctionData,sectionData,detectorData,defaultSigSettingData,...
     midlinkConfigData,controlPlanAimsun,masterControlPlanAimsun,nan);
 
@@ -228,10 +231,10 @@ outputFolder=findFolder.objects();
 save(fullfile(outputFolder,'recAimsunNet.mat'),'recAimsunNet')
 save(fullfile(outputFolder,'netInputFiles.mat'),'junctionData',...
     'sectionData','detectorData','controlPlanAimsun','masterControlPlanAimsun')
-disp('************************************')
-disp('Network is reconstructed!')
-disp('************************************')
 
+disp('*********************************************')
+disp('Done!')
+disp('*********************************************')
 
 % --- Executes on button press in RunEstimation.
 function RunEstimation_Callback(hObject, eventdata, handles)
@@ -321,22 +324,46 @@ function RunInitialization_Callback(hObject, eventdata, handles)
 
 clc 
 disp('*******************************************************')
-disp('***************Running State Initialization!***************')
+disp('************Traffic State Initialization!**************')
 disp('*******************************************************')
 
+disp('*********************************************')
+disp('Step 1/7: Loading the Estimates!')
+disp('*********************************************')
 % Load the estStateQueue file
 dp_StateQueue=load_estStateQueue_data; % With empty input: Default folder ('data\estStateQueueData')
 estStateQueue=dp_StateQueue.parse_csv('aimsun_queue_estimated.csv',dp_StateQueue.folderLocation);
 
+disp('*********************************************')
+disp('Step 2/7: Loading the Simulated Vehicles!')
+disp('*********************************************')
 % simVehicle data provider
 inputFolderLocation=findFolder.temp_aimsun_whole();
 dp_vehicle=simVehicle_data_provider(inputFolderLocation); 
 
+disp('*********************************************')
+disp('Step 3/7: Loading the Signal Data Providers!')
+disp('*********************************************')
 % simSignal data provider
 dp_signal_sim=simSignal_data_provider;
 dp_signal_field=fieldSignal_data_provider;
 
+disp('*********************************************')
+disp('Step 4/7: Collecting active control plans!')
+disp('*********************************************')
+DayConfig=get(handles.DayConfig,'String');
+source='FromAimsun';
+currentTime=str2double(get(handles.TimeStampConfig,'String'))*3600;
+dp_signal_field.timeStamp=currentTime;
+dp_signal_field.day=DayConfig;
+dp_signal_field.source=source;
+[dp_signal_field.activeControlPlans]=dp_signal_field...
+                .get_active_control_plans_for_given_day_and_time(DayConfig,currentTime,source);
+            
 % Generate vehicles
+disp('*********************************************')
+disp('Step 5/7: Collecting default parameters!')
+disp('*********************************************')
 VehicleLength=str2double(get(handles.VehicleLength,'String'));
 JamSpacing=str2double(get(handles.JamSpacing,'String'));
 Headway=str2double(get(handles.Headway,'String'));
@@ -352,7 +379,12 @@ querySetting=struct(... % Query settings
     'SearchTimeDuration', SearchInitializationConfig,...
     'Distance', DistanceToEnd);
 
-dp_initialization=initialization_in_aimsun(handles.recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan); % Currently missing field signal data provider
+disp('*********************************************')
+disp('Step 6/7: Generating Vehicles!')
+disp('*********************************************')
+inputFolder=findFolder.objects();
+load(fullfile(inputFolder,'recAimsunNet.mat'))
+dp_initialization=initialization_in_aimsun(recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan); % Currently missing field signal data provider
 vehicleList=dp_initialization.generate_vehicle(querySetting);
 
 outputLocation=findFolder.aimsun_initialization();
@@ -360,55 +392,20 @@ set(handles.InitializationTable,'Data',vehicleList);
 % dlmwrite('VehicleInfEstimation.csv', vehicleList, 'delimiter', ',', 'precision', 9); 
 dlmwrite(fullfile(outputLocation,'VehicleInfEstimation.csv'), vehicleList, 'delimiter', ',', 'precision', 9); 
 
-% --- Executes on button press in RunPhaseDetermination.
-function RunPhaseDetermination_Callback(hObject, eventdata, handles)
-% hObject    handle to RunPhaseDetermination (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+disp('*********************************************')
+disp('Step 7/7: Determining Signal Phases!')
+disp('*********************************************')
+type=struct(...
+    'ControlPlanSource',        'FieldInAimsun',...
+    'LastCycleInformation',     'None');
+[phaseListTable,phaseListAimsun]=dp_initialization.determine_phases(type);
 
-days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
-DayConfig=get(handles.DayConfig,'String');
-SelectedDayID=find(ismember(days,DayConfig)==1);
-if(SelectedDayID==1 || (SelectedDayID>=3 && SelectedDayID<=7) || SelectedDayID==9) % Use the weekday 
-    masterPlanName='Weekday';
-else
-    masterPlanName='Weekend';
-end
+dlmwrite(fullfile(outputLocation,'SignalInfEstimation.csv'), phaseListAimsun, 'delimiter', ',', 'precision', 9); 
+set(handles.PhaseDeterminationTable,'Data',phaseListTable);
 
-controlPlanAimsun=handles.recAimsunNet.controlPlanAimsun;
-masterControlPlanAimsun=handles.recAimsunNet.masterControlPlanAimsun;
-
-% Select the corresponding master control plans
-masterPlanNameAll={masterControlPlanAimsun.Name}';
-currentTime=str2double(get(handles.TimeStampConfig,'String'))*3600;
-startingTime=[masterControlPlanAimsun.StartingTime]';
-duration=[masterControlPlanAimsun.Duration]';
-endingTime=startingTime+duration;
-
-idx=(ismember(masterPlanNameAll,masterPlanName) &...
-    (startingTime<=currentTime & endingTime>currentTime));
-candidateControlPlan=masterControlPlanAimsun(idx,:);
-
-% Get the detailed information of the control plans
-PlanIDAll=[controlPlanAimsun.PlanID]';
-PlanPhaseDetermined=[];
-if (~isempty(candidateControlPlan))
-    controlPlans=[];
-    for i=1:size(candidateControlPlan,1)
-        PhaseID=candidateControlPlan(i).ControlPlanID;
-        idx=ismember(PlanIDAll,PhaseID);
-        if(sum(idx)==0)
-            fprintf('Control Plan ID: %d is not for traffic signal!\n',PhaseID)
-        else
-            controlPlans=[controlPlans;controlPlanAimsun(idx,:)];
-        end
-    end
-end
-
-
-
-set(handles.PhaseDeterminationTable,'Data',PlanPhaseDetermined);
-
+disp('*********************************************')
+disp('Done!')
+disp('*********************************************')
 
 % --- Executes on button press in RunAimsun.
 function RunAimsun_Callback(hObject, eventdata, handles)
@@ -475,7 +472,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function JunctionInfFile_Callback(hObject, eventdata, handles)
 % hObject    handle to JunctionInfFile (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -496,7 +492,6 @@ function JunctionInfFile_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function SectionInfFile_Callback(hObject, eventdata, handles)
@@ -521,7 +516,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function DetectorInfFile_Callback(hObject, eventdata, handles)
 % hObject    handle to DetectorInfFile (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -542,7 +536,6 @@ function DetectorInfFile_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function DefaultSigInfFile_Callback(hObject, eventdata, handles)
@@ -567,7 +560,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function MidlinkCountInfFile_Callback(hObject, eventdata, handles)
 % hObject    handle to MidlinkCountInfFile (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -575,7 +567,6 @@ function MidlinkCountInfFile_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of MidlinkCountInfFile as text
 %        str2double(get(hObject,'String')) returns contents of MidlinkCountInfFile as a double
-
 
 % --- Executes during object creation, after setting all properties.
 function MidlinkCountInfFile_CreateFcn(hObject, eventdata, handles)
@@ -595,7 +586,6 @@ function LoadAllFiles_Callback(hObject, eventdata, handles)
 % hObject    handle to LoadAllFiles (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 
 
 function DayConfig_Callback(hObject, eventdata, handles)
@@ -620,7 +610,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function TimeStampConfig_Callback(hObject, eventdata, handles)
 % hObject    handle to TimeStampConfig (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -641,7 +630,6 @@ function TimeStampConfig_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function SearchEstimationConfig_Callback(hObject, eventdata, handles)
@@ -666,7 +654,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function SearchInitializationConfig_Callback(hObject, eventdata, handles)
 % hObject    handle to SearchInitializationConfig (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -687,7 +674,6 @@ function SearchInitializationConfig_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function DistanceToEnd_Callback(hObject, eventdata, handles)
@@ -712,7 +698,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function VehicleLength_Callback(hObject, eventdata, handles)
 % hObject    handle to VehicleLength (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -733,7 +718,6 @@ function VehicleLength_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function JamSpacing_Callback(hObject, eventdata, handles)
@@ -758,7 +742,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function Headway_Callback(hObject, eventdata, handles)
 % hObject    handle to Headway (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -779,7 +762,6 @@ function Headway_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function MedianConfig_Callback(hObject, eventdata, handles)
@@ -811,7 +793,6 @@ function UpdateSettings_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-
 function FileLocation_Callback(hObject, eventdata, handles)
 % hObject    handle to FileLocation (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -832,7 +813,6 @@ function FileLocation_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function NameOfPythonCode_Callback(hObject, eventdata, handles)
@@ -857,7 +837,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-
 function AimsunFile_Callback(hObject, eventdata, handles)
 % hObject    handle to AimsunFile (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -878,7 +857,6 @@ function AimsunFile_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 function ReplicationID_Callback(hObject, eventdata, handles)
@@ -987,4 +965,3 @@ function InputFolder_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
