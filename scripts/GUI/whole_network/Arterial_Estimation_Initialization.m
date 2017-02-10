@@ -352,13 +352,16 @@ disp('*********************************************')
 disp('Step 4/7: Collecting active control plans!')
 disp('*********************************************')
 DayConfig=get(handles.DayConfig,'String');
-source='FromAimsun';
 currentTime=str2double(get(handles.TimeStampConfig,'String'))*3600;
+type=struct(...
+    'ControlPlanSource',        'FromAimsun',...
+    'LastCycleInformation',     'None');
 dp_signal_field.timeStamp=currentTime;
 dp_signal_field.day=DayConfig;
-dp_signal_field.source=source;
+dp_signal_field.source=type.ControlPlanSource;
+dp_signal_field.LastCycleInformation=type.LastCycleInformation;
 [dp_signal_field.activeControlPlans]=dp_signal_field...
-                .get_active_control_plans_for_given_day_and_time(DayConfig,currentTime,source);
+                .get_active_control_plans_for_given_day_and_time(DayConfig,currentTime,type.ControlPlanSource);
             
 % Generate vehicles
 disp('*********************************************')
@@ -383,25 +386,19 @@ disp('*********************************************')
 disp('Step 6/7: Generating Vehicles!')
 disp('*********************************************')
 inputFolder=findFolder.objects();
+outputLocation=findFolder.aimsun_initialization();
 load(fullfile(inputFolder,'recAimsunNet.mat'))
 dp_initialization=initialization_in_aimsun(recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan); % Currently missing field signal data provider
 vehicleList=dp_initialization.generate_vehicle(querySetting);
-
-outputLocation=findFolder.aimsun_initialization();
 set(handles.InitializationTable,'Data',vehicleList);
-% dlmwrite('VehicleInfEstimation.csv', vehicleList, 'delimiter', ',', 'precision', 9); 
 dlmwrite(fullfile(outputLocation,'VehicleInfEstimation.csv'), vehicleList, 'delimiter', ',', 'precision', 9); 
 
 disp('*********************************************')
 disp('Step 7/7: Determining Signal Phases!')
 disp('*********************************************')
-type=struct(...
-    'ControlPlanSource',        'FieldInAimsun',...
-    'LastCycleInformation',     'None');
 [phaseListTable,phaseListAimsun]=dp_initialization.determine_phases(type);
-
-dlmwrite(fullfile(outputLocation,'SignalInfEstimation.csv'), phaseListAimsun, 'delimiter', ',', 'precision', 9); 
 set(handles.PhaseDeterminationTable,'Data',phaseListTable);
+dlmwrite(fullfile(outputLocation,'SignalInfEstimation.csv'), phaseListAimsun, 'delimiter', ',', 'precision', 9); 
 
 disp('*********************************************')
 disp('Done!')

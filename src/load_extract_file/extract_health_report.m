@@ -60,7 +60,9 @@ classdef extract_health_report
             
            performance=zeros(numDetector,numDay);
            avgPerformance=zeros(3,numDay);
+           avgPerformanceNum=zeros(3,numDay);
            performanceDetour=zeros(6,numDay);
+           performanceDetourNum=zeros(6,numDay);
            
            for i=1:numDetector
                id=DetectorIDs{i};
@@ -83,18 +85,28 @@ classdef extract_health_report
            avgPerformance(1,:)= mean(performance>0)*100;
            avgPerformance(2,:)= mean(performance==0)*100;
            avgPerformance(3,:)= mean(performance<0)*100;
-               
+           
+           avgPerformanceNum(1,:)= sum(performance>0);
+           avgPerformanceNum(2,:)= sum(performance==0);
+           avgPerformanceNum(3,:)= sum(performance<0);
+           
            for k=0:1:1
                idx=(DetourRoute==1-k);               
                performanceDetour(3*(k)+1,:)= mean(performance(idx,:)>0)*100;
                performanceDetour(3*(k)+2,:)= mean(performance(idx,:)==0)*100;
                performanceDetour(3*(k)+3,:)= mean(performance(idx,:)<0)*100;
+               
+               performanceDetourNum(3*(k)+1,:)= sum(performance(idx,:)>0);
+               performanceDetourNum(3*(k)+2,:)= sum(performance(idx,:)==0);
+               performanceDetourNum(3*(k)+3,:)= sum(performance(idx,:)<0);
            end
            
-           this.write_to_excel(DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour);
+           this.write_to_excel(DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour...
+               ,avgPerformanceNum,performanceDetourNum);
         end
 
-        function [this]=write_to_excel(this,DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour)
+        function [this]=write_to_excel(this,DetectorIDs,StartDateID,EndDateID,performance,avgPerformance,performanceDetour,...
+                avgPerformanceNum,performanceDetourNum)
             outputFolder=findFolder.reports;
             outputFileName=fullfile(outputFolder,sprintf('Health_Report_%s_TO_%s.xlsx',datestr(StartDateID),datestr(EndDateID)));
             
@@ -135,7 +147,7 @@ classdef extract_health_report
             xlswrite(outputFileName,avgPerformance,'Daily Report',sprintf('K%d:%s%d',size(performanceGrade,1)+2,...
                 asciiEndColumn,size(performanceGrade,1)+1+size(avgPerformance,1)));
             
-            %*****Writing daily performance ******
+            %*****Writing weekly performance ******
             numDay=size(avgPerformance,2);
             if(numDay>=7) % Only provide weekly report when the number of days greater than or equal to one week
                 xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.city}],'Weekly Report');
@@ -165,7 +177,39 @@ classdef extract_health_report
                 
                 xlswrite(outputFileName,weekstr,'Weekly Report',sprintf('A4:A%d',numWeek+3));
                 
-            end                
+            end      
+            
+            %*****Writing weekly performance with absolute numbers******
+            numDay=size(avgPerformanceNum,2);
+            if(numDay>=7) % Only provide weekly report when the number of days greater than or equal to one week
+                xlswrite(outputFileName,[{'Weekly Data Quality (%)'},{''},{this.city}],'Weekly Report(Number)');
+                
+                xlswrite(outputFileName,[{' '},{'Detour Routes'},{' '}, {' '},{'Not Detour Routes'},{' '},{' '}]...
+                    ,'Weekly Report(Number)','A2:G2');
+                
+                xlswrite(outputFileName,[{' '},{'Good'}, {'Bad'},{'No Data'},{'Good'}, {'Bad'},{'No Data'}]...
+                    ,'Weekly Report(Number)','A3:G3');
+                
+                numWeek=floor(numDay/7);
+                weeklyPerformanceNum=zeros(numWeek,6);
+                for k=0:1:1                    
+                    for i=1:numWeek
+                        for j=1:3                            
+                            weeklyPerformanceNum(i,3*k+j)=round(mean(performanceDetourNum(3*k+j,(i-1)*7+1:i*7)));
+                        end
+                    end
+                end
+                
+                xlswrite(outputFileName,weeklyPerformanceNum,'Weekly Report(Number)',sprintf('B4:G%d',numWeek+3));
+                
+                weekStart=cellstr(datestr(StartDateID:7:StartDateID+7*(numWeek-1)));
+                weekEnd=cellstr(datestr(StartDateID+6:7:StartDateID+6+7*(numWeek-1)));
+                
+                weekstr= strcat(weekStart,{' To '}, weekEnd);
+                
+                xlswrite(outputFileName,weekstr,'Weekly Report(Number)',sprintf('A4:A%d',numWeek+3));
+                
+            end  
         end
     end
     

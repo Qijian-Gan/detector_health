@@ -98,14 +98,13 @@ classdef initialization_in_aimsun
         end
         
         function [phaseListTable,phaseListAimsun]=determine_phases(this,type)
-            % This function is used to determine the active phases and how
-            % long they have been activated
+            %% This function is used to determine the active phases and how long they have been activated
             
             currentTimeStamp=this.estStateQueue(1).Time; % Get the current time
             
             % Load the control plans
             switch type.ControlPlanSource
-                case 'FieldInAimsun'
+                case 'FromAimsun'
                     controlPlans=this.fieldSigDataProvider.activeControlPlans;      
                 otherwise
                     error('Unrecognized source of active control plans!')
@@ -115,19 +114,19 @@ classdef initialization_in_aimsun
             
             % Loop for each control plane --junction
             phaseList=[];            
-            for i=1:numOfPlans
-                controlPlanStartTime=controlPlans(i).PlanOffset;                
-                coordination=controlPlans(i).Coordination;
-                numRings=controlPlans(i).NumRings;
+            for i=1:numOfPlans % Loop for each phase
+                controlPlanStartTime=controlPlans(i).PlanOffset;    % Get the starting time            
+                coordination=controlPlans(i).Coordination; % Get the coordination information
+                numRings=controlPlans(i).NumRings; % Get the number of rings
                 
                 % Get the phase properties
-                phases=controlPlans(i).Phases;
-                phaseRingAll=[phases.RingID]';
-                starttimePhaseAll=[phases.StartTime]';
-                durationPhaseAll=[phases.Duration]';
-                endtimePhaseAll=durationPhaseAll+starttimePhaseAll;
-                phaseInRingID=(1:size(phases,1));
-                phaseIDAll=[phases.PhaseID]';
+                phases=controlPlans(i).Phases; % Phases
+                phaseRingAll=[phases.RingID]'; % Ring IDs
+                starttimePhaseAll=[phases.StartTime]'; % Start times
+                durationPhaseAll=[phases.Duration]'; % Durations
+                endtimePhaseAll=durationPhaseAll+starttimePhaseAll; % Ending times
+                phaseInRingID=(1:size(phases,1)); % Phase ID in ring: from 1 to numOfPhases
+                phaseIDAll=[phases.PhaseID]'; % Phase IDs
                 
                 switch type.LastCycleInformation
                     case 'None' % Don't use the last cycle information to determine the current phases
@@ -139,8 +138,7 @@ classdef initialization_in_aimsun
                                 isCoordinated=1;
                                 break;
                             end
-                        end
-                        
+                        end                        
                         
                         if isCoordinated==0 % Not coordinated? No need to use the phase offset
                             timeControlPlanIsActivated=controlPlanStartTime;
@@ -148,36 +146,11 @@ classdef initialization_in_aimsun
                             if(timeControlPlanHasActivated<0)
                                 timeControlPlanIsActivated=timeControlPlanIsActivated-controlPlans(i).Cycle;
                                 timeControlPlanHasActivated=timeControlPlanHasActivated+controlPlans(i).Cycle;
-                            end
-                            
+                            end                            
                             restTime=mod(timeControlPlanHasActivated,controlPlans(i).Cycle);                            
                             timeEndOfLastCycle=currentTimeStamp-restTime;
-                            
-                            % Determine the active phase in each ring                            
-                            for j=1:numRings
-                                ringID=j; % Ring ID
-                                idx=(phaseRingAll==j &...
-                                    (starttimePhaseAll<=restTime & endtimePhaseAll>restTime));                                
-                                phaseIDInAimsun=[phases(idx).PhaseID];
-                                phaseIDInCycle=phaseInRingID(idx);
-                                durationActivated=(currentTimeStamp-timeEndOfLastCycle-starttimePhaseAll(idx));
-                                
-                                
-                                for k=1:length(phaseIDInCycle)
-                                    phaseList=[phaseList, struct(...
-                                        'JunctionID',controlPlans(i).JunctionID,...
-                                        'PlanIDInAimsun',controlPlans(i).PlanID,...
-                                        'ControlType', controlPlans(i).ControlType,...
-                                        'CycleLength',controlPlans(i).Cycle,...
-                                        'Coordinated',isCoordinated,...
-                                        'RingID',ringID,...
-                                        'PhaseIDInAimsun',phaseIDInAimsun(k),...
-                                        'PhaseIDInCycle',phaseIDInCycle(k),...
-                                        'DurationActivated',durationActivated(k))];
-                                end
-                            end
-                            
-                        else
+
+                        else % If it is coordinated
                             % Get the time elapse
                             for j=1:size(coordination,1)
                                 if(coordination(j).PhaseID>0)
@@ -188,6 +161,7 @@ classdef initialization_in_aimsun
                                 end
                             end
                             
+                            % Get the elasped time
                             coordinatedPhase=phases(phaseIDAll==phaseID,:);
                             startTimePhase=coordinatedPhase.StartTime;
                             durationPhase=coordinatedPhase.Duration;
@@ -197,40 +171,41 @@ classdef initialization_in_aimsun
                                 timeElapse=startTimePhase;
                             end
                             
+                            % Calculated the activation time
                             timeControlPlanIsActivated=controlPlanStartTime-(timeElapse-phaseOffSet);
                             timeControlPlanHasActivated=currentTimeStamp-timeControlPlanIsActivated;
-                            if(timeControlPlanHasActivated<0)
+                            if(timeControlPlanHasActivated<0) % If it is activated earlier
                                 timeControlPlanIsActivated=timeControlPlanIsActivated-controlPlans(i).Cycle;
                                 timeControlPlanHasActivated=timeControlPlanHasActivated+controlPlans(i).Cycle;
                             end
                             
                             restTime=mod(timeControlPlanHasActivated,controlPlans(i).Cycle);                            
                             timeEndOfLastCycle=currentTimeStamp-restTime;
+
+                        end
+                        
+                        % Determine the active phase in each ring
+                        for j=1:numRings
+                            ringID=j; % Ring ID
+                            idx=(phaseRingAll==j &...
+                                (starttimePhaseAll<=restTime & endtimePhaseAll>restTime));
+                            phaseIDInAimsun=[phases(idx).PhaseID];
+                            phaseIDInCycle=phaseInRingID(idx);
+                            durationActivated=(currentTimeStamp-timeEndOfLastCycle-starttimePhaseAll(idx));
                             
-                            % Determine the active phase in each ring                            
-                            for j=1:numRings
-                                ringID=j; % Ring ID
-                                idx=(phaseRingAll==j &...
-                                    (starttimePhaseAll<=restTime & endtimePhaseAll>restTime));                                
-                                phaseIDInAimsun=[phases(idx).PhaseID];
-                                phaseIDInCycle=phaseInRingID(idx);
-                                durationActivated=(currentTimeStamp-timeEndOfLastCycle-starttimePhaseAll(idx));
-                                
-                                for k=1:length(phaseIDInCycle)
-                                    phaseList=[phaseList, struct(...
-                                        'JunctionID',controlPlans(i).JunctionID,...
-                                        'PlanIDInAimsun',controlPlans(i).PlanID,...
-                                        'ControlType', controlPlans(i).ControlType,...
-                                        'CycleLength',controlPlans(i).Cycle,...
-                                        'Coordinated',isCoordinated,...
-                                        'RingID',ringID,...
-                                        'PhaseIDInAimsun',phaseIDInAimsun(k),...
-                                        'PhaseIDInCycle',phaseIDInCycle(k),...
-                                        'DurationActivated',durationActivated(k))];
-                                end
+                            for k=1:length(phaseIDInCycle)
+                                phaseList=[phaseList, struct(...
+                                    'JunctionID',controlPlans(i).JunctionID,...
+                                    'PlanIDInAimsun',controlPlans(i).PlanID,...
+                                    'ControlType', controlPlans(i).ControlType,...
+                                    'CycleLength',controlPlans(i).Cycle,...
+                                    'Coordinated',isCoordinated,...
+                                    'RingID',ringID,...
+                                    'PhaseIDInAimsun',phaseIDInAimsun(k),...
+                                    'PhaseIDInCycle',phaseIDInCycle(k),...
+                                    'DurationActivated',durationActivated(k))];
                             end
                         end
-
                     otherwise
                         error('Can not find the method to determine the last cycle information')
                 end
@@ -270,7 +245,7 @@ classdef initialization_in_aimsun
                 if(~isempty(fieldSigDataProvider))
                     % Use fieldSigDataProvider if it exists
                     % Currently  there is no field signal data!!
-                    phaseForApproach=fieldSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);
+                    phaseForApproach=fieldSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf);
                 else
                     % Else, use simSigDataProvider
                     phaseForApproach=simSigDataProvider.get_signal_phasing_for_junction_time(junctionSectionInf, currentTime);

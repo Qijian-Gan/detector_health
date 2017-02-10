@@ -2,25 +2,48 @@ classdef turning_count_provider
     properties
         
         inputFolderLocation             % Folder that stores the turning counts
-
+        
+        TPConfigFileLocation            % TP configuration file location
+        TPConfigFileName                % TP configuration file name
+        FieldAimsunFileMatch            % Loopup file for the matches of field and aimsun files
     end
     
     methods ( Access = public )
 
-        function [this]=turning_count_provider(inputFolderLocation)
+        function [this]=turning_count_provider(inputFolderLocation,TPConfigFileLocation,TPConfigFileName)
             %% This function is to obtain the turning counts
             
-            % Obtain inputs
+            % Obtain inputs  
             if nargin==0 % Default input folder
                 this.inputFolderLocation=findFolder.temp;
             else
                 this.inputFolderLocation=inputFolderLocation; % Get the input folder
-                if(nargin>1)
-                    error('Too many inputs!')
-                end
-            end             
+            end      
+            
+            if nargin>1
+                this.TPConfigFileLocation=TPConfigFileLocation;
+            else
+                this.TPConfigFileLocation=findFolder.config();
+            end  
+            
+            if nargin==2
+                this.TPConfigFileName=TPConfigFileName;
+            else
+                this.TPConfigFileName='TP_FieldID_AimsunID.xlsx';
+            end  
+
+            if nargin>2
+                error('Too many inputs!')
+            end
+            
+            this.FieldAimsunFileMatch=read_FieldAimsunFileMatch(this);
         end
          
+        function [FieldAimsunFileMatch]=read_FieldAimsunFileMatch(this)
+            
+            [~,FieldAimsunFileMatch]=xlsread(fullfile(this.TPConfigFileLocation,this.TPConfigFileName));
+            
+        end
         function [data_out]=get_data_for_a_date(this,fileName, queryMeasures)
             % This function is to get data for a particular date
           

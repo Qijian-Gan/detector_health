@@ -52,7 +52,7 @@ def main(argv):
             print 'Extract control plans to be used in simulation!'
             ExtractMasterControlPlanInformation(model, outputLocation)
 
-        #gui.save()
+        gui.save()
 
         print 'Done with network extraction!'
         print 'Exit the Aimsun model!'
@@ -157,112 +157,44 @@ def ExtractJunctionInformation(model,outputLocation):
     return 0
 
 def UpdateTurningDescription(numEntranceSections,entranceSections,junctionObj,DefaultAngle):
-    # This function is used to update the turning description in Aimsun
-    # Francois has added descriptions to some turning movements
-    # (pertected left, permissive left, U turn, two way stopbar)
 
     for j in range(numEntranceSections):
         turnInfSection = junctionObj.getFromTurningsOrderedFromLeftToRight(entranceSections[j])
-        # Get the turning movements from left to right
-
-
+        # Get the minumum angle
         #Returns the angle, in degrees, between the last segment of the origin section and
         #  the turn line. When going clockwise the angle will be negative and when going
         # counterclockwise the angle will be positive
-
-        # Get the turn with the minumum angle
         curAddr = 0
         minAngle = abs(turnInfSection[0].calcAngleBridge())
-        descriptions=[]
-        leftTurnIdx=[]
-        lastLeftIdx=[]
         for k in range(len(turnInfSection)):
-            individualDescription=turnInfSection[k].getDescription()
-            descriptions.append(individualDescription)
-            if(individualDescription is not None): # If we have additional descriptions from the model
-                # Check whether it is a left-turn movement or not
-                idxLeft=individualDescription.contains('Left')
-                idxUTurn = individualDescription.contains('U Turn')
-                if(idxLeft or idxUTurn): # If yes
-                    leftTurnIdx.append(1)
-                    lastLeftIdx=k # Get the index of the last left turn movement
-                else: # If no
-                    leftTurnIdx.append(0)
-            else: # No additional description
-                leftTurnIdx.append(0)
-
-            # Get the minimum angle
             if(minAngle>abs(turnInfSection[k].calcAngleBridge())):
                 curAddr=k
                 minAngle = abs(turnInfSection[k].calcAngleBridge())
 
-        if(sum(leftTurnIdx)==0): # No additional description to help?
-            if minAngle <=DefaultAngle: # Through movement
-                turnInfSection[curAddr].setDescription('Through'+':'+descriptions[curAddr])
+        if minAngle <=DefaultAngle: # Through movement
+            turnInfSection[curAddr].setDescription('Through')
+            for t in range(curAddr): # Set turns on the left to be Left Turn
+                turnInfSection[t].setDescription('Left Turn')
+            for t in range(len(turnInfSection)-curAddr-1): # Set turns on the right to be Right Turn
+                turnInfSection[t+curAddr+1].setDescription('Right Turn')
+        else:
+            if len(turnInfSection)==3:
+                # It is possible for some special case that Through movement has
+                # a big turning angle, then Overwrite it
+                turnInfSection[0].setDescription('Left Turn')
+                turnInfSection[1].setDescription('Through')
+                turnInfSection[2].setDescription('Right Turn')
+
+            elif (turnInfSection[curAddr].calcAngleBridge()>DefaultAngle):
+                for t in range(curAddr+1): # Set turns on the left to be Left Turn
+                    turnInfSection[t].setDescription('Left Turn')
+                for t in range(len(turnInfSection)-curAddr-1): # Set turns on the right to be Right Turn
+                    turnInfSection[t+curAddr+1].setDescription('Right Turn')
+            elif (turnInfSection[curAddr].calcAngleBridge()<-DefaultAngle):
                 for t in range(curAddr): # Set turns on the left to be Left Turn
-                    turnInfSection[t].setDescription('Left Turn'+':'+descriptions[t])
-                for t in range(curAddr+1,len(turnInfSection)): # Set turns on the right to be Right Turn
-                    turnInfSection[t].setDescription('Right Turn'+':'+descriptions[t])
-            else:
-                if len(turnInfSection)==3:
-                    # It is possible for some special case that Through movement has
-                    # a big turning angle, then Overwrite it
-                    # In the case of three movements, we consider they are left, through, and right
-                    turnInfSection[0].setDescription('Left Turn'+':'+descriptions[0])
-                    turnInfSection[1].setDescription('Through'+':'+descriptions[1])
-                    turnInfSection[2].setDescription('Right Turn'+':'+descriptions[2])
-
-                elif (turnInfSection[curAddr].calcAngleBridge()>DefaultAngle): # Have a bigger angle to the left
-                    for t in range(curAddr+1): # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn'+':'+descriptions[t])
-                    for t in range(curAddr+1,len(turnInfSection)): # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn'+':'+descriptions[t])
-
-                elif (turnInfSection[curAddr].calcAngleBridge()<-DefaultAngle): # Have a bigger angle to the right
-                    for t in range(curAddr): # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn'+':'+descriptions[t])
-                    for t in range(curAddr,len(turnInfSection)): # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn'+':'+descriptions[t])
-        else: # Has additional descriptions
-            if minAngle <= DefaultAngle: # It is probably a through movement
-                if lastLeftIdx<curAddr: # Yes, it is!
-                    for t in range(curAddr):  # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn' + ':' + descriptions[t])
-                    turnInfSection[curAddr].setDescription('Through' + ':' + descriptions[curAddr])
-                    for t in range(curAddr+1,len(turnInfSection)):  # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn' + ':' + descriptions[t])
-                else: # If, it is not! No through movements!
-                    for t in range(lastLeftIdx+1):  # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn' + ':' + descriptions[t])
-                    for t in range(lastLeftIdx+1,len(turnInfSection)):  # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn' + ':' + descriptions[t])
-            else:
-                if len(turnInfSection)==3 and lastLeftIdx==0:
-                    # It is possible for some special case that Through movement has
-                    # a big turning angle, then Overwrite it
-                    # In the case of three movements, we consider they are left, through, and right
-                    turnInfSection[0].setDescription('Left Turn'+':'+descriptions[0])
-                    turnInfSection[1].setDescription('Through'+':'+descriptions[1])
-                    turnInfSection[2].setDescription('Right Turn'+':'+descriptions[2])
-
-                elif (turnInfSection[curAddr].calcAngleBridge() > DefaultAngle):  # Have a bigger angle to the left
-                    if lastLeftIdx>curAddr:
-                        curAddr=lastLeftIdx
-
-                    for t in range(curAddr+1):  # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn' + ':' + descriptions[t])
-                    for t in range(curAddr+1,len(turnInfSection)):  # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn' + ':' + descriptions[t])
-
-                elif (turnInfSection[curAddr].calcAngleBridge() < -DefaultAngle):  # Have a bigger angle to the right
-                    if lastLeftIdx >=curAddr:
-                        curAddr = lastLeftIdx+1
-
-                    for t in range(curAddr):  # Set turns on the left to be Left Turn
-                        turnInfSection[t].setDescription('Left Turn' + ':' + descriptions[t])
-                    for t in range(curAddr, len(turnInfSection)):  # Set turns on the right to be Right Turn
-                        turnInfSection[t].setDescription('Right Turn' + ':' + descriptions[t])
-
+                    turnInfSection[t].setDescription('Left Turn')
+                for t in range(len(turnInfSection)-curAddr): # Set turns on the right to be Right Turn
+                    turnInfSection[t+curAddr].setDescription('Right Turn')
 
 def ExtractSectionInformation(model,outputLocation):
 

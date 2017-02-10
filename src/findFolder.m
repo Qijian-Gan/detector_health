@@ -95,6 +95,22 @@ classdef findFolder
             x = fullfile(findFolder.root,'output');
         end
         
+        function [x] = IEN_organization()
+            x = fullfile(findFolder.root,'\data\IEN_feed\organization_inventory');
+        end
+        
+        function [x] = IEN_detector()
+            x = fullfile(findFolder.root,'\data\IEN_feed\detector_inventory');
+        end
+        
+        function [x] = IEN_detector_data()
+            x = fullfile(findFolder.root,'\data\IEN_feed\detector_data');
+        end
+        
+        function [x] = IEN_temp()
+            x = fullfile(findFolder.root,'temp_IEN');
+        end
+        
     end
     
 end

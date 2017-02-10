@@ -84,7 +84,7 @@ classdef state_estimation
         
         %% Functions to get/update params and proportions        
         function [proportions]=update_vehicle_proportions(this,approach_in,queryMeasures)
-            % This function is to update vehicle proportions if possible
+            %% This function is to update vehicle proportions if possible
             
             % *******Update the default values if possible
             % Get turning count data
@@ -168,9 +168,16 @@ classdef state_estimation
             % This function is to get turning count data for a given
             % approach with given query measures
             
-            % Get the file name
-            fileName=sprintf('TP_%s_%s_%s.mat',approach_in.intersection_name,...
+            % Get the file name            
+            TPFileMatch=this.dataProvider_turningCount.FieldAimsunFileMatch;
+            currentFile=sprintf('TP_%s_%s_%s',approach_in.intersection_name,...
                 strrep(approach_in.road_name,' ', '_'),approach_in.direction);
+            idx=ismember(TPFileMatch(:,2),currentFile);            
+            if(sum(idx))
+                fileName=sprintf('%s.mat',TPFileMatch{idx,1});
+            else
+                fileName=sprintf('%s.mat',currentFile);
+            end
             
             % If: for a particular date
             if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) 
