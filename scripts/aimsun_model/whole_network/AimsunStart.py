@@ -263,12 +263,13 @@ def UpdateTurningDescription(numEntranceSections,entranceSections,junctionObj,De
                     for t in range(curAddr, len(turnInfSection)):  # Set turns on the right to be Right Turn
                         turnInfSection[t].setDescription('Right Turn' + ':' + descriptions[t])
 
-
 def ExtractSectionInformation(model,outputLocation):
 
     ####################Get the section information#####################
     sectionInfFileName=outputLocation+'\SectionInf.txt'
     sectionInfFile = open(sectionInfFileName, 'w')
+
+    translator=GKCoordinateTranslator(model)
 
     # Get the number of sections
     numSection=0
@@ -287,8 +288,10 @@ def ExtractSectionInformation(model,outputLocation):
             # Write the first line
             lanes=sectionObj.getLanes()
             totLane=len(lanes)
-            sectionInfFile.write('Section ID,Name,External ID,# of lanes\n')
-            sectionInfFile.write('%i,%s,%s,%i\n' % (sectionID, sectionName, sectionExtID, totLane))
+            points = sectionObj.getPoints()  # Get the shape files
+            totPoint = len(points)
+            sectionInfFile.write('Section ID,Name,External ID,# of lanes,# of points\n')
+            sectionInfFile.write('%i,%s,%s,%i,%i\n' % (sectionID, sectionName, sectionExtID, totLane,totPoint))
 
             # Write the lane lengths
             sectionInfFile.write("Lane lengths:\n")
@@ -305,6 +308,14 @@ def ExtractSectionInformation(model,outputLocation):
                 sectionInfFile.write(("%i,") % sectionLane.isFullLane())  # Get the lane status
             sectionLane = sectionObj.getLane(totLane - 1)  # Get the section_lane object
             sectionInfFile.write(("%i\n") % sectionLane.isFullLane())  # Get the lane status: To find whether it is a full lane: use to identify left-turn and right-turn pockets
+
+            # Write the shape files
+            sectionInfFile.write("Shape points:\n")
+            for j in range(totPoint-1):
+                point= translator.toDegrees(points[j])
+                sectionInfFile.write(("%.6f,%.6f,") % (point.x,point.y))
+            point = translator.toDegrees(points[totPoint-1])
+            sectionInfFile.write(("%.6f,%.6f\n") % (point.x, point.y))
 
             sectionInfFile.write("\n")
     return 0

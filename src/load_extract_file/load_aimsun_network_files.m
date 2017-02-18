@@ -98,7 +98,8 @@ classdef load_aimsun_network_files
                         'Description',      [],...
                         'TurningSpeed',     []);
                     if(length(tmp{1,1})>=8)
-                        data(i).Turnings.TurningInf(j).Description=tmp{1,1}{8,1};
+                        tmpline=textscan(tmp{1,1}{8,1},'%s','Delimiter',':','EmptyValue',-Inf);
+                        data(i).Turnings.TurningInf(j).Description=tmpline{1,1}{1,1};
                     end
                     if(length(tmp{1,1})>=9)
                         data(i).Turnings.TurningInf(j).TurningSpeed=tmp{1,1}{9,1};
@@ -147,6 +148,7 @@ classdef load_aimsun_network_files
                 data(i).Name=tmp{1,1}{2,1};
                 data(i).ExternalID=tmp{1,1}{3,1};
                 data(i).NumLanes=str2double(tmp{1,1}{4,1});
+                data(i).NumPoints=str2double(tmp{1,1}{5,1});
                 
                 tline=fgetl(fileID); % Get the lane lengths
                 tline=fgetl(fileID);
@@ -164,6 +166,16 @@ classdef load_aimsun_network_files
                     data(i).IsFullLane(j)=str2double(tmp{1,1}{j,1});
                 end
                 
+                tline=fgetl(fileID); % Get the shape?
+                tline=fgetl(fileID);
+                tmp = textscan(tline,'%s','Delimiter',',','EmptyValue',-Inf);
+                data(i).ShapePoint=repmat(struct(...
+                    'Longitude', nan,...
+                    'Latitude', nan),data(i).NumPoints,1);
+                for j=1:data(i).NumPoints
+                    data(i).ShapePoint(j).Longitude=str2double(tmp{1,1}{(j-1)*2+1,1});
+                    data(i).ShapePoint(j).Latitude=str2double(tmp{1,1}{j*2,1});
+                end
                 tline=fgetl(fileID); % Get the blank line
             end
         end

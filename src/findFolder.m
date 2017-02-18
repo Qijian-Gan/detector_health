@@ -111,6 +111,18 @@ classdef findFolder
             x = fullfile(findFolder.root,'temp_IEN');
         end
         
+        function [x] = BEATS_network()
+            x = fullfile(findFolder.root,'\data\BEATS_simulation\network');
+        end
+        
+        function [x] = BEATS_result()
+            x = fullfile(findFolder.root,'\data\BEATS_simulation\result');
+        end
+        
+        function [x] = BEATS_temp()
+            x = fullfile(findFolder.root,'temp_BEATS');
+        end
+        
     end
     
 end
