@@ -46,7 +46,7 @@ classdef load_BEATS_network
                 
                 type='XMLNetwork';
             elseif(strfind(file,'link_id_map'))
-                
+
                 data=[];
                 fileID = fopen(fullfile(location,file));
                 tline=fgetl(fileID); % Ignore the first line
@@ -82,7 +82,7 @@ classdef load_BEATS_network
                                 AimsunLinks=[AimsunLinks;str2double(strMapping{1,i})];
                             end
                         end
-                    end
+                    end                    
                     data=[data; struct(...
                         'BEATSLinkID', str2double(strMapping{1,1}),...
                         'Type', (strMapping{1,2}),...
@@ -180,18 +180,34 @@ classdef load_BEATS_network
             
         end
         
-        function [dataOut]=transfer_beats_to_aimsun(dataIn,sectionIn)
+        function [dataOut]=transfer_beats_to_aimsun(dataIn,sectionIn,XMLMapping,XMLNetwork)
             %% This function is used to transfer the links in beats to aimsun 
             
             sectionIDAll=[sectionIn.SectionID]';
+            
+            BEATSLinkAll=[XMLMapping.LegacyLink]';
             
             %Note that: the links in BEATS are organized based on the
             %traffic direction
             dataOut=[];
             AimsunLinks=[];
-            for i=1:size(dataIn,1)
-                if(~isempty(dataIn(i).AimsunLinks))
-                    for j=1:length(dataIn(i).AimsunLinks)
+            for i=1:size(dataIn,1) % Loop for each BEATS link
+                if(~isempty(dataIn(i).AimsunLinks)) % The set of Aimsun link is not empty
+                    % Find the link ID in the BEATS simulation
+                    % Note this ID is differnet from the BEATS ID
+                    % The simulation output is based on this ID
+                    idx=ismember(BEATSLinkAll,dataIn(i).BEATSLinkID);
+                    if(sum(idx)==0)
+                        error('Can not find the simulation link ID for the given BEATS link!')
+                    else
+                        SimLinkID=XMLMapping(idx).LinkID;
+                        FD=XMLNetwork.get_fds_with_linkIDs(dataIn(i).BEATSLinkID);
+                    end
+                    
+                    for j=1:length(dataIn(i).AimsunLinks) % Loop for each Aimsun link
+                        
+                        % Check whether we can find the Aimsun link in the
+                        % section data obtained from Aimsun
                         idx=ismember(sectionIDAll,dataIn(i).AimsunLinks(j));
                         if(sum(idx))
                             sectionData=sectionIn(idx,:);
@@ -199,35 +215,41 @@ classdef load_BEATS_network
                             error('Can not find the Aimsun ID!')
                         end
                         
-                        if(~isempty(AimsunLinks))
+                        if(~isempty(AimsunLinks)) % If the new output format is not empty
                             idx=ismember(AimsunLinks,dataIn(i).AimsunLinks(j));
-                            if(sum(idx))
+                            if(sum(idx)) % If we find the corresponding Aimsun link
                                 dataOut(idx).BEATSLinks=[dataOut(idx).BEATSLinks;struct(...
                                     'BEATSLinkID',dataIn(i).BEATSLinkID,...
+                                    'SimLinkID', SimLinkID,...
                                     'Type', dataIn(i).Type,...
+                                    'FundamentalDiagram', FD,...
                                     'Length', dataIn(i).Length,...
                                     'Latitude', dataIn(i).Latitude,...
                                     'Longitude', dataIn(i).Longitude)];
-                            else
+                            else % If not found, treat it as a new row
                                 AimsunLinks=[AimsunLinks;dataIn(i).AimsunLinks(j)];                                
                                 dataOut=[dataOut;struct(...
                                     'AimsunlinkID',dataIn(i).AimsunLinks(j),...
                                     'LinkProperty', sectionData,...
                                     'BEATSLinks',struct(...
                                                     'BEATSLinkID',dataIn(i).BEATSLinkID,...
+                                                    'SimLinkID', SimLinkID,...
                                                     'Type', dataIn(i).Type,...
+                                                    'FundamentalDiagram', FD,...
                                                     'Length', dataIn(i).Length,...
                                                     'Latitude', dataIn(i).Latitude,...
                                                     'Longitude', dataIn(i).Longitude))];
                             end
-                        else
+                        else % If it is empty, add the new row
                             AimsunLinks=dataIn(i).AimsunLinks(j);
                                 dataOut=struct(...
                                     'AimsunlinkID',dataIn(i).AimsunLinks(j),...
                                     'LinkProperty', sectionData,...
                                     'BEATSLinks',struct(...
                                                     'BEATSLinkID',dataIn(i).BEATSLinkID,...
+                                                    'SimLinkID', SimLinkID,...
                                                     'Type', dataIn(i).Type,...
+                                                    'FundamentalDiagram', FD,...
                                                     'Length', dataIn(i).Length,...
                                                     'Latitude', dataIn(i).Latitude,...
                                                     'Longitude', dataIn(i).Longitude));

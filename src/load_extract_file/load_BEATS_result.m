@@ -130,28 +130,86 @@ classdef load_BEATS_result
         end
                 
         function save_data(this,data)
+            %% This function is to save the simulation data
             
-            % Get the file name
-            fileName=fullfile(this.outputFolderLocation,'BEATS_simulation_result.mat');
+            dataBEATSResult=[];
+            curLinkIDs=[];
             
-            if(exist(fileName,'file')) % If the file exists
-                load(fileName);
-                dataBEATSResult=[dataBEATSResult;data];
-                networkID={dataBEATSResult.NetworkID}';
-                scenarioID={dataBEATSResult.ScenarioID}';
-                taskID={dataBEATSResult.TaskID}';
-                date={dataBEATSResult.Date}';
-                time={dataBEATSResult.Time}';
-                networkScenarioTaskDateTime=strcat(networkID,scenarioID,taskID,date,time);
-                [~,idx]=unique(networkScenarioTaskDateTime,'rows');
-                dataBEATSResult=dataBEATSResult(idx,:);
-            else
-                % If it is the first time
-                dataBEATSResult=data;
+            % Save by individual BEATS link (ID is the simulation ID)
+            for i=1:size(data,1) % Loop for each row
+                fprintf('Date=%s and Time=%s\n',data(i).Date,data(i).Time);
+                
+                results=data(i).Results;
+                linkIDAll=[results.LinkID]';
+                
+                if(isempty(curLinkIDs)) % At the beginning, it is empty
+                    for j=1:length(linkIDAll) % Loop for each link contained in the results
+                        curLinkIDs=[curLinkIDs;linkIDAll(j)];
+                        dataBEATSResult=[dataBEATSResult;struct(...
+                            'LinkID', linkIDAll(j),...
+                            'Results',struct(...
+                                'NetworkID',data(i).NetworkID,...
+                                'ScenarioID',data(i).ScenarioID,...
+                                'TaskID',data(i).TaskID,...
+                                'Date',data(i).Date,...
+                                'Time',data(i).Time,...
+                                'Result',results(j,:)))];
+                    end
+                else                    
+                    for j=1:length(linkIDAll) % Loop for each link contained in the results
+                        idx=ismember(curLinkIDs,linkIDAll(j));
+                        if(sum(idx)==0) % A new link ID
+                            curLinkIDs=[curLinkIDs;linkIDAll(j)];
+                            dataBEATSResult=[dataBEATSResult;struct(...
+                            'LinkID', linkIDAll(j),...
+                            'Results',struct(...
+                                'NetworkID',data(i).NetworkID,...
+                                'ScenarioID',data(i).ScenarioID,...
+                                'TaskID',data(i).TaskID,...
+                                'Date',data(i).Date,...
+                                'Time',data(i).Time,...
+                                'Result',results(j,:)))];
+                        else % If found
+                            dataBEATSResult(idx).Results=[dataBEATSResult(idx).Results;struct(...
+                                'NetworkID',data(i).NetworkID,...
+                                'ScenarioID',data(i).ScenarioID,...
+                                'TaskID',data(i).TaskID,...
+                                'Date',data(i).Date,...
+                                'Time',data(i).Time,...
+                                'Result',results(j,:))];
+                        end
+                    end
+                end
             end
             
-            % Save the health report
+            % Save the total data
+            fileName=fullfile(this.outputFolderLocation,'BEATS_simulation_result.mat');
             save(fileName,'dataBEATSResult');
+            
+
+            % Save the data by individual links
+            for i=1:size(dataBEATSResult) % Loop for each link                
+                fileName=fullfile(this.outputFolderLocation,sprintf('BEATS_simulation_link_%d.mat',dataBEATSResult(i).LinkID));
+                
+                if(exist(fileName,'file')) % If the file exists
+                    load(fileName);
+                    dataBEATSLinkResult=[dataBEATSLinkResult;dataBEATSResult(i).Results];
+                    networkID={dataBEATSLinkResult.NetworkID}';
+                    scenarioID={dataBEATSLinkResult.ScenarioID}';
+                    taskID={dataBEATSLinkResult.TaskID}';
+                    date={dataBEATSLinkResult.Date}';
+                    time={dataBEATSLinkResult.Time}';
+                    networkScenarioTaskDateTime=strcat(networkID,scenarioID,taskID,date,time);
+                    [~,idx]=unique(networkScenarioTaskDateTime,'rows');
+                    dataBEATSLinkResult=dataBEATSLinkResult(idx,:);
+                else
+                    % If it is the first time
+                    dataBEATSLinkResult=dataBEATSResult(i).Results;
+                end
+                
+                % Save the health report
+                save(fileName,'dataBEATSLinkResult');
+            end   
         end
     end
     

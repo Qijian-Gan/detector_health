@@ -51,12 +51,12 @@ for i=1:numFileNetwork % Loop for each file
             case 'XMLMapping'
                 data.XMLMapping=tmp_data;
             case 'BEATSMapping'
-                data.BEATSWithAimsunMapping=tmp_data;
-                data.AimsunWithBEATSMapping=dp.transfer_beats_to_aimsun(data.BEATSWithAimsunMapping,sectionData);
+                data.BEATSWithAimsunMapping=tmp_data;                
         end
         tmpList=[tmpList;{fileListNetwork(i).name}];
 %     end
 end
+data.AimsunWithBEATSMapping=dp.transfer_beats_to_aimsun(data.BEATSWithAimsunMapping,sectionData,data.XMLMapping,data.XMLNetwork);
 
 if(~isempty(data))
     dp.save_data(data)
