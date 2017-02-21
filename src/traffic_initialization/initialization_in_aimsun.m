@@ -7,13 +7,14 @@ classdef initialization_in_aimsun
         simVehDataProvider      % Data provider that contains the simulated vehicles
         simSigDataProvider      % Data provider that contains the signal plans in simulation
         fieldSigDataProvider    % Data Provider that contains the signal plans in the field
-        
+                
         defaultParams
     end
     
     methods ( Access = public )
         
-        function [this]=initialization_in_aimsun(networkData,estStateQueue,simVehDataProvider,simSigDataProvider,fieldSigDataProvider,defaultParams,outputFolder)
+        function [this]=initialization_in_aimsun(networkData,estStateQueue,simVehDataProvider,simSigDataProvider,fieldSigDataProvider,...
+                defaultParams,outputFolder)
             %% This function is to generate vehicles for the initialization of aimsun
             
             this.networkData=networkData;
@@ -223,6 +224,7 @@ classdef initialization_in_aimsun
             end
             
         end
+        
     end
     
     methods ( Static)

@@ -210,7 +210,6 @@ classdef simBEATS_data_provider
                 idx=(years==byYear);
                 dataFile=dataFile(idx,:);
                 months=months(idx);
-                days=days(idx);
                 times=times(idx);
                 clear idx
             end
