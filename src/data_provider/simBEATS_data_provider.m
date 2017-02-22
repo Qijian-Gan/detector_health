@@ -115,7 +115,7 @@ classdef simBEATS_data_provider
             
             % First read the data file
             for i=1:numOfLinks
-                linkID=char(listOfLinks(i));
+                linkID=num2str(listOfLinks(i));
                 
                 % Load data file
                 dataFile=fullfile(this.inputFolderLocation,sprintf('BEATS_simulation_link_%s.mat',linkID));
@@ -209,6 +209,7 @@ classdef simBEATS_data_provider
             if (byYear>0)
                 idx=(years==byYear);
                 dataFile=dataFile(idx,:);
+                dates=dates(idx);
                 months=months(idx);
                 times=times(idx);
                 clear idx
@@ -218,6 +219,7 @@ classdef simBEATS_data_provider
             if (byMonth>0)
                 idx=(months==byMonth);
                 dataFile=dataFile(idx,:);
+                dates=dates(idx);
                 times=times(idx);
                 clear idx
             end
@@ -233,6 +235,7 @@ classdef simBEATS_data_provider
                     idx=(weekday(dates)==dayOfWeek);
                 end
                 dataFile=dataFile(idx,:);
+                dates=dates(idx);
                 times=times(idx);
                 clear idx
             end
@@ -258,7 +261,7 @@ classdef simBEATS_data_provider
                 outflowMean=[data.OutflowMean]';
                 outflowStdDev=[data.OutflowStdDev]';
                 
-                data_out=simBEATS_data_provider.get_time_of_day_data(times,densityMean,densityStdDev,velocityMean,...
+                data_out=simBEATS_data_provider.get_time_of_day_data(dates,times,densityMean,densityStdDev,velocityMean,...
                     velocityStdDev,inflowMean,inflowStdDev,outflowMean, outflowStdDev,timeOfDay,useMedian);
                 if(isnan(data_out.Time))
                     status={'No Data'};
@@ -269,11 +272,11 @@ classdef simBEATS_data_provider
             
         end
 
-        function [data_out]=get_time_of_day_data(time,densityMean,densityStdDev,velocityMean,...
+        function [data_out]=get_time_of_day_data(dates,time,densityMean,densityStdDev,velocityMean,...
                     velocityStdDev,inflowMean,inflowStdDev,outflowMean, outflowStdDev,timeOfDay,useMedian)
             %% This function is to get the data for time of day
              
-            if(size(data,1)==1) % Only one day
+            if(size(unique(dates),1)==1) % Only one day
                 if(timeOfDay(end)>0) % Return time of day's data
                     startTime=timeOfDay(1);
                     endTime=timeOfDay(2);
@@ -291,17 +294,17 @@ classdef simBEATS_data_provider
                 
             else % Have multiple days
                 tmp_time=sort(unique(time));                
-                tmp_densityMean=zeros(size(time));
-                tmp_densityStdDev=zeros(size(time));
-                tmp_velocityMean=zeros(size(time));
-                tmp_velocityStdDev=zeros(size(time));
-                tmp_inflowMean=zeros(size(time));
-                tmp_inflowStdDev=zeros(size(time));
-                tmp_outflowMean=zeros(size(time));
-                tmp_outflowStdDev=zeros(size(time));
+                tmp_densityMean=zeros(size(tmp_time));
+                tmp_densityStdDev=zeros(size(tmp_time));
+                tmp_velocityMean=zeros(size(tmp_time));
+                tmp_velocityStdDev=zeros(size(tmp_time));
+                tmp_inflowMean=zeros(size(tmp_time));
+                tmp_inflowStdDev=zeros(size(tmp_time));
+                tmp_outflowMean=zeros(size(tmp_time));
+                tmp_outflowStdDev=zeros(size(tmp_time));
             
                 if(useMedian) % Use the median values
-                    for i=1:length(time)
+                    for i=1:length(tmp_time)
                         idx=(time==tmp_time(i));
                         tmp_densityMean(i)=median(densityMean(idx));
                         tmp_densityStdDev(i)=median(densityStdDev(idx));
@@ -314,7 +317,7 @@ classdef simBEATS_data_provider
                     end
                   
                 else
-                    for i=1:length(time)
+                    for i=1:length(tmp_time)
                         idx=(time==tmp_time(i));
                         tmp_densityMean(i)=mean(densityMean(idx));
                         tmp_densityStdDev(i)=mean(densityStdDev(idx));

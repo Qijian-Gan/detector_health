@@ -25,7 +25,8 @@ data.AimsunWithBEATSMapping=dp_network_BEATS.transfer_beats_to_aimsun(data.BEATS
 ptr_beats=simBEATS_data_provider; 
 
 % simVehicle data provider
-dp_vehicle=simVehicle_data_provider; 
+inputFileLoc=findFolder.temp_aimsun_whole;
+dp_vehicle=simVehicle_data_provider(inputFileLoc); 
 
 defaultParams=struct(... % Default parameters
     'VehicleLength', 17,...
@@ -40,11 +41,12 @@ dp_initialization_beats=initialization_in_aimsun_with_beats(data,dp_vehicle,ptr_
 
 % Default settings
 days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'}; 
-from=8.5*3600; % Starting time
-to=8.5*3600;  % Ending time
+from=7.5*3600; % Starting time
+to=7.5*3600;  % Ending time
 interval=300;
 
 aimsunWithBeatsInitialization=dp_initialization_beats.networkData.AimsunWithBEATSMapping;
+vehListWithBeats=[];
 for day=8:8 % Weekday   
     for i=1:size(aimsunWithBeatsInitialization,1) % Loop for all approaches 
         for t=from:interval:to % Loop for all prediction intervals
@@ -56,11 +58,12 @@ for day=8:8 % Weekday
                 'median', 1,...
                 'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
             
-            aimsunLinkID=aimsunWithBeatsInitialization(i,AimsunLinkID)
-
-                
+            [tmpVehList]=dp_initialization_beats.generate_vehicles_for_a_link...
+                (aimsunWithBeatsInitialization(i),queryMeasures,querySetting,t);
+            vehListWithBeats=[vehListWithBeats;tmpVehList];                
         end
     end
 end
 
+dlmwrite('VehicleInfEstimation.csv', vehListWithBeats, 'delimiter', ',', 'precision', 9); 
 
