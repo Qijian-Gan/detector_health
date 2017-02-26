@@ -434,30 +434,56 @@ function RunEstimation_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 clc
 inputFolder=findFolder.GUI_temp();
-if(handles.ArterialFieldData.Value==1)
-    disp('*******************************************************')
-    disp('******Run Estimation For Arterial links!***************')
-    disp('*******************************************************')
+disp('*******************************************************')
+disp('******Runing Estimation********************************')
+disp('*******************************************************')
 
-    disp('*******************************************************')
-    disp('******Collecting Data!*********************************')
-    disp('*******************************************************')
-    if(exist(fullfile(inputFolder,'recAimsunNet.mat'),'file'))
-        load(fullfile(inputFolder,'recAimsunNet.mat'));
-    else
-        error('Please extract and reconstruct the Aimsun network first!')
-    end
-    if(exist(fullfile(inputFolder,'DataQueryParameter.mat'),'file'))
-        load(fullfile(inputFolder,'DataQueryParameter.mat'));
-    else
-        error('Please set the data query parameters first!')
-    end
-    if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file'))
-        load(fullfile(inputFolder,'EstimationParameters.mat'));
-    else
-        error('Please set the estimation parameters first!')
-    end
+disp('*******************************************************')
+disp('******Collecting Data!*********************************')
+disp('*******************************************************')
+if(exist(fullfile(inputFolder,'recAimsunNet.mat'),'file'))
+    load(fullfile(inputFolder,'recAimsunNet.mat'));
+else
+    error('Please extract and reconstruct the Aimsun network first!')
+end
+if(exist(fullfile(inputFolder,'DataQueryParameter.mat'),'file'))
+    load(fullfile(inputFolder,'DataQueryParameter.mat'));
+else
+    error('Please set the data query parameters first!')
+end
+if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file'))
+    load(fullfile(inputFolder,'EstimationParameters.mat'));
+else
+    error('Please set the estimation parameters first!')
+end
+
+% Default settings
+days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
+DayConfig=DataQueryParameter.DaySetting;
+SelectedDayID=find(ismember(days,DayConfig)==1);
+from=str2double(DataQueryParameter.TimeSetting)*3600;
+interval=str2double(EstimationParameters.SearchIntervalEstimation);
+Median=DataQueryParameter.UseMedian;
+switch Median
+    case 'Yes'
+        UseMedianOrNot=1;
+    case 'No'
+        UseMedianOrNot=0;
+end
+
+queryMeasures=struct(...
+    'year',     nan,...
+    'month',    nan,...
+    'day',      nan,...
+    'dayOfWeek',SelectedDayID-1,...
+    'median', UseMedianOrNot,...
+    'timeOfDay', [from-interval from]); % Use a longer time interval to obtain more reliable data
+
+if(handles.ArterialFieldData.Value==1)
     
+    disp('*******************************************************')
+    disp('******Arterial links!**********************************')
+    disp('*******************************************************')
     % Generate the configuration of approaches for traffic state estimation
     appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
     
@@ -466,53 +492,77 @@ if(handles.ArterialFieldData.Value==1)
     ptr_sensor=sensor_count_provider;
     ptr_midlink=midlink_count_provider;
     ptr_turningCount=turning_count_provider;
-    
-    % Default settings
-    days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
-    DayConfig=DataQueryParameter.DaySetting;
-    SelectedDayID=find(ismember(days,DayConfig)==1);
-    from=str2double(DataQueryParameter.TimeSetting)*3600;
-    to=from;  % Ending time
-    interval=str2double(EstimationParameters.SearchIntervalEstimation);
-    Median=DataQueryParameter.UseMedian;
-    switch Median
-        case 'Yes'
-            UseMedianOrNot=1;
-        case 'No'
-            UseMedianOrNot=0;
-    end
-    
+
     % Run state estimation
     est=state_estimation(appDataForEstimation,ptr_sensor,ptr_midlink,ptr_turningCount);
     appStateEst=[];
     folderLocation=findFolder.estStateQueue_data();
-    fileName='aimsun_queue_estimated.csv';
-    for i=1:size(appDataForEstimation,1) % Loop for all approaches
-        for t=from:interval:to % Loop for all prediction intervals
-            queryMeasures=struct(...
-                'year',     nan,...
-                'month',    nan,...
-                'day',      nan,...
-                'dayOfWeek',SelectedDayID-1,...
-                'median', UseMedianOrNot,...
-                'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
-            
-            tmp_approach=appDataForEstimation(i);
-            [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
-            [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
-            [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
-            if (t==from)
-                approach=tmp_approach;
-            else
-                approach.decision_making=[approach.decision_making;tmp_approach.decision_making];
-            end
-        end
-        appStateEst=[appStateEst;approach];
+    fileName='AimsunQueueEstimated.csv';
+    for i=1:size(appDataForEstimation,1) % Loop for all approaches        
+        tmp_approach=appDataForEstimation(i);
+        [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
+        [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
+        [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
+        appStateEst=[appStateEst;tmp_approach];
     end
     sheetName=DayConfig;
-    Table=est.extract_to_csv(appStateEst,folderLocation,fileName);
+    ArterialEstimationTable=est.extract_to_csv(appStateEst,folderLocation,fileName);
     save(fullfile(inputFolder,sprintf('appStateEst_%s.mat',DayConfig)),'appStateEst');
+    save(fullfile(inputFolder,'ArterialEstimationTable.mat'),'ArterialEstimationTable');
     
+    disp('*******************************************************')
+    disp('******Done with Arterial Links!************************')
+    disp('*******************************************************')
+end
+
+if(handles.FreewayBeats.Value==1)
+    disp('*******************************************************')
+    disp('******Freeway links!***********************************')
+    disp('*******************************************************')
+    %% Load the network information file
+    % Aimsun
+    inputFolder=findFolder.GUI_temp();
+    fileName=fullfile(inputFolder,'BeatsNetwork.mat');
+    if(exist(fileName,'file'))
+        load(fileName); % Variable: BeatsNetwork
+        dp_network_BEATS=BeatsNetwork.DataProvider;
+        data=BeatsNetwork.Data;
+    else
+        error('Please load and reconstruct the BEATS network first!')
+    end
+    
+    %% Estimation
+    % Beats data provider
+    ptr_beats=simBEATS_data_provider;
+
+    EstimationResultsBeats=[];
+    AimsunWithBEATSMapping=data.AimsunWithBEATSMapping;
+    for i=1:size(AimsunWithBEATSMapping,1)
+        AimsunLinkID=AimsunWithBEATSMapping(i).AimsunLinkID;
+        BeatsLinks=AimsunWithBEATSMapping(i).BEATSLinks;
+        BeatsLinkIDs=[BeatsLinks.SimLinkID]';
+                
+        % Obtain the simulated BEATS data
+        beatsLinkData=initialization_in_aimsun_with_beats.get_estimates_from_beats_simulation...
+            (BeatsLinkIDs,ptr_beats,queryMeasures);
+        AimsunWithBEATSMapping(i).BEATSLinkData=beatsLinkData;
+        
+        for j=1:size(beatsLinkData,1)
+            [avgDensityBeats,avgDensityStdDevBeats,avgSpeedBeats,avgSpeedStdDevBeats]=...
+                initialization_in_aimsun_with_beats.get_averages(beatsLinkData(j));
+            EstimationResultsBeats=[EstimationResultsBeats;...
+                [AimsunLinkID,BeatsLinkIDs(j),from,avgDensityBeats,avgDensityStdDevBeats,avgSpeedBeats,avgSpeedStdDevBeats]];
+        end
+    end
+    
+    outputFolder=findFolder.estStateQueue_data;
+    dlmwrite(fullfile(outputFolder,'EstimationResultsBeats.csv'), EstimationResultsBeats, 'delimiter', ',', 'precision', 9);
+    
+    save(fullfile(inputFolder,sprintf('AimsunWithBEATSMapping_%s.mat',DayConfig)),'AimsunWithBEATSMapping');
+    save(fullfile(inputFolder,'FreewayEstimationTable.mat'),'EstimationResultsBeats');
+    disp('*******************************************************')
+    disp('******Done with Freeway Links!*************************')
+    disp('*******************************************************')
 end
 
 % --- Executes on button press in ViewEstimation.
@@ -521,10 +571,18 @@ function ViewEstimation_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-    handles.appStateEst=appStateEst;
-    handles.recAimsunNet=recAimsunNet;
-    guidata(hObject, handles)
-    set(handles.EstimationTable,'Data',Table);
+if(handles.ArterialFieldData.Value==1 && handles.FreewayBeats.Value==0)    
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\EstimationTableArterial.m'));
+elseif(handles.ArterialFieldData.Value==0 && handles.FreewayBeats.Value==1)
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\EstimationTableFreeway.m'));
+elseif(handles.ArterialFieldData.Value==1 && handles.FreewayBeats.Value==1)
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\EstimationTable.m'));
+end
+
+
 
 %% Initialization
 % --- Executes on button press in InitializationVehicle.
@@ -692,6 +750,72 @@ end
 sheetName=DayConfig;
 Table=est.extract_to_csv(appStateEst,folderLocation,fileName);
 save(sprintf('appStateEst_%s.mat',DayConfig),'appStateEst');
+
+
+
+%% Load the network information file
+% Aimsun
+InputFolder=findFolder.aimsunNetwork_data_whole();
+dp_network_Aimsun=load_aimsun_network_files(InputFolder); 
+if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
+    sectionData=dp_network_Aimsun.parse_sectionInf_txt('SectionInf.txt');
+else
+    error('Cannot find the section information file in the folder!')
+end
+
+%BEATS
+dp_network_BEATS=load_BEATS_network;
+data.XMLNetwork=dp_network_BEATS.parse_BEATS_network_files('210E_for_estimation_v5_links_fixed.xml');
+data.XMLMapping=dp_network_BEATS.parse_BEATS_network_files('link_id_map_450.csv');
+data.BEATSWithAimsunMapping=dp_network_BEATS.parse_BEATS_network_files('BEATSLinkTable.csv');
+data.AimsunWithBEATSMapping=dp_network_BEATS.transfer_beats_to_aimsun(data.BEATSWithAimsunMapping,sectionData,data.XMLMapping,data.XMLNetwork);
+
+%% Initialization
+% Beats data provider
+ptr_beats=simBEATS_data_provider; 
+
+% simVehicle data provider
+inputFileLoc=findFolder.temp_aimsun_whole;
+dp_vehicle=simVehicle_data_provider(inputFileLoc); 
+
+defaultParams=struct(... % Default parameters
+    'VehicleLength', 17,...
+    'JamSpacing', 24,...
+    'Headway', 2);
+
+querySetting=struct(... % Query settings
+    'SearchTimeDuration', 30*60,...
+    'Distance', 60);
+
+dp_initialization_beats=initialization_in_aimsun_with_beats(data,dp_vehicle,ptr_beats,defaultParams,nan);
+
+% Default settings
+days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'}; 
+from=7.5*3600; % Starting time
+to=7.5*3600;  % Ending time
+interval=300;
+
+aimsunWithBeatsInitialization=dp_initialization_beats.networkData.AimsunWithBEATSMapping;
+vehListWithBeats=[];
+for day=8:8 % Weekday   
+    for i=1:size(aimsunWithBeatsInitialization,1) % Loop for all approaches 
+        for t=from:interval:to % Loop for all prediction intervals
+            queryMeasures=struct(...
+                'year',     nan,...
+                'month',    nan,...
+                'day',      nan,...
+                'dayOfWeek',day,...
+                'median', 1,...
+                'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
+            
+            [tmpVehList]=dp_initialization_beats.generate_vehicles_for_a_link...
+                (aimsunWithBeatsInitialization(i),queryMeasures,querySetting,t);
+            vehListWithBeats=[vehListWithBeats;tmpVehList];                
+        end
+    end
+end
+outputFolder=findFolder.aimsun_initialization;
+dlmwrite(fullfile(outputFolder,'VehicleInfEstimation.csv'), vehListWithBeats, 'delimiter', ',', 'precision', 9); 
 
 handles.appStateEst=appStateEst;
 handles.recAimsunNet=recAimsunNet;

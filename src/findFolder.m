@@ -126,6 +126,10 @@ classdef findFolder
         function [x] = GUI_temp()
             x = fullfile(findFolder.root,'temp_GUI');
         end
+        
+        function [x] = GUI_aimsun_model()
+            x = fullfile(findFolder.root,'\scripts\aimsun_model\whole_network');
+        end
     end
     
 end
