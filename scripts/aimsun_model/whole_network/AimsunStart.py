@@ -322,6 +322,7 @@ def ExtractSectionInformation(model,outputLocation):
 
 def ExtractDetectorInformation(model,outputLocation):
 
+    AddAttributeToDetector(model, outputLocation)
     ####################Get the detector information#####################
     detectorInfFileName = outputLocation+'\DetectorInf.csv'
     detectorInfFile = open(detectorInfFileName, 'w')
@@ -358,6 +359,52 @@ def ExtractDetectorInformation(model,outputLocation):
                 detectorID, detectorExtID, section.getId(), description,
                 numLanes-detectorObj.getToLane(), numLanes-detectorObj.getFromLane(),startPos, endPos))
     return 0
+
+def AddAttributeToDetector(model,outputLocation):
+
+    gui = GKGUISystem.getGUISystem().getActiveGui()
+
+    detectorConfigFileName=os.path.join(outputLocation,'detector_movement_config.csv')
+
+    detectorIDFull = []
+    movements = []
+
+    #####################Get the detector configuration information#####################
+    with open(detectorConfigFileName, 'rb') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=',')
+        next(spamreader, None)
+        for row in spamreader:
+            if row[0] != "":
+                intID = int(row[0])
+                sensorID = int(row[1])
+                detectorIDFull.append(intID * 100 + sensorID)
+                movements.append(str(row[2]))
+
+    # for i in range(len(detectorIDFull)):
+    #	print("IntID=%s, Movement=%s\n"%(detectorIDFull[i],movements[i]))
+
+    # Get the number of detectors
+    numDetector = 0
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKDetector")):
+        numDetector = numDetector + len(types)
+    # print numDetector
+
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKDetector")):
+        for detectorObj in types.itervalues():
+            detectorID = detectorObj.getId()
+            detectorExtID = detectorObj.getExternalId()  # Get the external ID
+            symbol = 0
+            for j in range(len(detectorIDFull)):
+                if (detectorExtID.toInt() == int(detectorIDFull[j])):
+                    detectorObj.setDescription(movements[j])
+                    symbol = 1
+                    break
+                else:
+                    detectorObj.setDescription("")
+
+            description = detectorObj.getDescription()
+            print ("detectorID=%d,detectorExtID=%s,Movement=%s" % (detectorID, detectorExtID, description))
+
 
 def ExtractControlPlanInformation(model,outputLocation):
     # Creat and open the output file

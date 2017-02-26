@@ -123,6 +123,9 @@ classdef findFolder
             x = fullfile(findFolder.root,'temp_BEATS');
         end
         
+        function [x] = GUI_temp()
+            x = fullfile(findFolder.root,'temp_GUI');
+        end
     end
     
 end

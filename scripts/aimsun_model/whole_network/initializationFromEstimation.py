@@ -39,7 +39,8 @@ def AAPIInit():
 			tracking=True
 			#print("%i,%i,%i,%i,%i,%f,%f,%i\n"%(asection,idLane, vehTypePos, idCentroidOr, idCentroidDest, initPosition, initSpeed, tracking))
 			idx= AKIPutVehTrafficOD(asection,idLane, vehTypePos, idCentroidOr, idCentroidDest, initPosition, initSpeed, tracking)
-			#print("%i\n"%(idx))
+			if(idx<0):
+				print("section=%i,status=%i\n"%(asection,idx))
 	return 0
 
 def AAPIManage(time, timeSta, timeTrans, acycle):

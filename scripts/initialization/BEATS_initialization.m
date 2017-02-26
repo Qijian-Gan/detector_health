@@ -64,6 +64,6 @@ for day=8:8 % Weekday
         end
     end
 end
-
-dlmwrite('VehicleInfEstimation.csv', vehListWithBeats, 'delimiter', ',', 'precision', 9); 
+outputFolder=findFolder.aimsun_initialization;
+dlmwrite(fullfile(outputFolder,'VehicleInfEstimation.csv'), vehListWithBeats, 'delimiter', ',', 'precision', 9); 
 

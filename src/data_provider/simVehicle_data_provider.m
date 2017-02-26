@@ -116,7 +116,7 @@ classdef simVehicle_data_provider
                             
                             centroidLane=[centroidLane; struct(...
                                 'laneID',lanes(j),...
-                                'ODcentroids',turning_data_lane(:,[9,10,15]))];
+                                'ODcentroids',turning_data_lane(:,[9,10,15,3]))];
                         end
                         
                         % Get the centroid-lane information by downstream

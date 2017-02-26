@@ -3134,6 +3134,42 @@ def ECIGetCurrentStateofSignalGroupbyName(*args):
   return _AAPI.ECIGetCurrentStateofSignalGroupbyName(*args)
 ECIGetCurrentStateofSignalGroupbyName = _AAPI.ECIGetCurrentStateofSignalGroupbyName
 
+def ECIGetTypeControlofJunction(*args):
+  return _AAPI.ECIGetTypeControlofJunction(*args)
+ECIGetTypeControlofJunction = _AAPI.ECIGetTypeControlofJunction
+
+def ECIGetNbPhasesofJunction(*args):
+  return _AAPI.ECIGetNbPhasesofJunction(*args)
+ECIGetNbPhasesofJunction = _AAPI.ECIGetNbPhasesofJunction
+
+def ECIGetNbRingsJunction(*args):
+  return _AAPI.ECIGetNbRingsJunction(*args)
+ECIGetNbRingsJunction = _AAPI.ECIGetNbRingsJunction
+
+def ECIGetNbBarriersJunction(*args):
+  return _AAPI.ECIGetNbBarriersJunction(*args)
+ECIGetNbBarriersJunction = _AAPI.ECIGetNbBarriersJunction
+
+def ECIGetDurationsPhaseofJunction(*args):
+  return _AAPI.ECIGetDurationsPhaseofJunction(*args)
+ECIGetDurationsPhaseofJunction = _AAPI.ECIGetDurationsPhaseofJunction
+
+def ECIGetYellowTimeofJunction(*args):
+  return _AAPI.ECIGetYellowTimeofJunction(*args)
+ECIGetYellowTimeofJunction = _AAPI.ECIGetYellowTimeofJunction
+
+def ECIGetYellowTimePhaseofJunction(*args):
+  return _AAPI.ECIGetYellowTimePhaseofJunction(*args)
+ECIGetYellowTimePhaseofJunction = _AAPI.ECIGetYellowTimePhaseofJunction
+
+def ECISetYellowTimePhaseofJunction(*args):
+  return _AAPI.ECISetYellowTimePhaseofJunction(*args)
+ECISetYellowTimePhaseofJunction = _AAPI.ECISetYellowTimePhaseofJunction
+
+def ECIIsAnInterPhaseofJunction(*args):
+  return _AAPI.ECIIsAnInterPhaseofJunction(*args)
+ECIIsAnInterPhaseofJunction = _AAPI.ECIIsAnInterPhaseofJunction
+
 def ECIGetActuatedParamsPassageTime(*args):
   return _AAPI.ECIGetActuatedParamsPassageTime(*args)
 ECIGetActuatedParamsPassageTime = _AAPI.ECIGetActuatedParamsPassageTime
@@ -3166,17 +3202,9 @@ def ECISetActuatedParamsForceOFFPermissivePeriod(*args):
   return _AAPI.ECISetActuatedParamsForceOFFPermissivePeriod(*args)
 ECISetActuatedParamsForceOFFPermissivePeriod = _AAPI.ECISetActuatedParamsForceOFFPermissivePeriod
 
-def ECIGetNbRingsJunction(*args):
-  return _AAPI.ECIGetNbRingsJunction(*args)
-ECIGetNbRingsJunction = _AAPI.ECIGetNbRingsJunction
-
 def ECIGetCurrentNbRingsJunction(*args):
   return _AAPI.ECIGetCurrentNbRingsJunction(*args)
 ECIGetCurrentNbRingsJunction = _AAPI.ECIGetCurrentNbRingsJunction
-
-def ECIGetNbBarriersJunction(*args):
-  return _AAPI.ECIGetNbBarriersJunction(*args)
-ECIGetNbBarriersJunction = _AAPI.ECIGetNbBarriersJunction
 
 def ECIGetCurrentNbBarriersJunction(*args):
   return _AAPI.ECIGetCurrentNbBarriersJunction(*args)
