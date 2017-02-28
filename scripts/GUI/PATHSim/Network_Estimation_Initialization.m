@@ -22,7 +22,7 @@ function varargout = Network_Estimation_Initialization(varargin)
 
 % Edit the above text to modify the response to help Network_Estimation_Initialization
 
-% Last Modified by GUIDE v2.5 24-Feb-2017 11:52:07
+% Last Modified by GUIDE v2.5 26-Feb-2017 15:29:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -492,13 +492,13 @@ if(handles.ArterialFieldData.Value==1)
     ptr_sensor=sensor_count_provider;
     ptr_midlink=midlink_count_provider;
     ptr_turningCount=turning_count_provider;
-
+    
     % Run state estimation
     est=state_estimation(appDataForEstimation,ptr_sensor,ptr_midlink,ptr_turningCount);
     appStateEst=[];
     folderLocation=findFolder.estStateQueue_data();
     fileName='AimsunQueueEstimated.csv';
-    for i=1:size(appDataForEstimation,1) % Loop for all approaches        
+    for i=1:size(appDataForEstimation,1) % Loop for all approaches
         tmp_approach=appDataForEstimation(i);
         [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
         [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
@@ -534,14 +534,14 @@ if(handles.FreewayBeats.Value==1)
     %% Estimation
     % Beats data provider
     ptr_beats=simBEATS_data_provider;
-
+    
     EstimationResultsBeats=[];
     AimsunWithBEATSMapping=data.AimsunWithBEATSMapping;
     for i=1:size(AimsunWithBEATSMapping,1)
         AimsunLinkID=AimsunWithBEATSMapping(i).AimsunLinkID;
         BeatsLinks=AimsunWithBEATSMapping(i).BEATSLinks;
         BeatsLinkIDs=[BeatsLinks.SimLinkID]';
-                
+        
         % Obtain the simulated BEATS data
         beatsLinkData=initialization_in_aimsun_with_beats.get_estimates_from_beats_simulation...
             (BeatsLinkIDs,ptr_beats,queryMeasures);
@@ -571,7 +571,7 @@ function ViewEstimation_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-if(handles.ArterialFieldData.Value==1 && handles.FreewayBeats.Value==0)    
+if(handles.ArterialFieldData.Value==1 && handles.FreewayBeats.Value==0)
     here = fileparts(mfilename('fullpath'));
     run(fullfile(here,'\Subfig\EstimationTableArterial.m'));
 elseif(handles.ArterialFieldData.Value==0 && handles.FreewayBeats.Value==1)
@@ -591,7 +591,13 @@ function InitializationVehicle_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of InitializationVehicle
+if(handles.InitializationVehicle.Value==1)
+    set(handles.VehicleFromAimsun,'Value',1)
+else
+    set(handles.VehicleFromAimsun,'Value',0)
+    set(handles.VehicleFromField,'Value',0)
+    set(handles.VehicleFromBEATS,'Value',0)
+end
 
 % --- Executes on button press in InitializationPhase.
 function InitializationPhase_Callback(hObject, eventdata, handles)
@@ -600,6 +606,33 @@ function InitializationPhase_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of InitializationPhase
+
+% --- Executes on button press in VehicleFromField.
+function VehicleFromField_Callback(hObject, eventdata, handles)
+% hObject    handle to VehicleFromField (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of VehicleFromField
+
+
+% --- Executes on button press in VehicleFromBEATS.
+function VehicleFromBEATS_Callback(hObject, eventdata, handles)
+% hObject    handle to VehicleFromBEATS (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of VehicleFromBEATS
+
+
+% --- Executes on button press in VehicleFromAimsun.
+function VehicleFromAimsun_Callback(hObject, eventdata, handles)
+% hObject    handle to VehicleFromAimsun (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of VehicleFromAimsun
+
 
 % --- Executes on button press in RunInitialization.
 function RunInitialization_Callback(hObject, eventdata, handles)
@@ -611,33 +644,69 @@ clc
 disp('*******************************************************')
 disp('************Traffic State Initialization!**************')
 disp('*******************************************************')
+%% Collecting data
+disp('*******************************************************')
+disp('******Collecting Data!*********************************')
+disp('*******************************************************')
+% Load network files: Aimsun Network an BEATS Network
+inputFolder=findFolder.GUI_temp();
+if(exist(fullfile(inputFolder,'recAimsunNet.mat'),'file'))
+    load(fullfile(inputFolder,'recAimsunNet.mat'));
+else
+    error('Please extract and reconstruct the Aimsun network first!')
+end
+if(exist(fullfile(inputFolder,'BeatsNetwork.mat'),'file'))
+    load(fullfile(inputFolder,'BeatsNetwork.mat'));
+else
+    error('Please extract and reconstruct the BEATS network first!')
+end
 
-disp('*********************************************')
-disp('Step 1/7: Loading the Estimates!')
-disp('*********************************************')
-% Load the estStateQueue file
-dp_StateQueue=load_estStateQueue_data; % With empty input: Default folder ('data\estStateQueueData')
-estStateQueue=dp_StateQueue.parse_csv('aimsun_queue_estimated.csv',dp_StateQueue.folderLocation);
+% Initialization parameters
+if(exist(fullfile(inputFolder,'InitializationParameters.mat'),'file'))
+    load(fullfile(inputFolder,'InitializationParameters.mat'));
+else
+    error('Please set the initialization parameters first!')
+end
+SearchInitializationConfig=str2double(InitializationParameters.SearchIntervalInitialization);
+DistanceToEnd=str2double(InitializationParameters.DistanceToEndTurning);
+querySetting=struct(... % Query settings
+    'SearchTimeDuration', SearchInitializationConfig,...
+    'Distance', DistanceToEnd);
 
-disp('*********************************************')
-disp('Step 2/7: Loading the Simulated Vehicles!')
-disp('*********************************************')
-% simVehicle data provider
-inputFolderLocation=findFolder.temp_aimsun_whole();
-dp_vehicle=simVehicle_data_provider(inputFolderLocation);
+% Load data query parameters
+if(exist(fullfile(inputFolder,'DataQueryParameter.mat'),'file'))
+    load(fullfile(inputFolder,'DataQueryParameter.mat'));
+else
+    error('Please set the data query parameters first!')
+end
+if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file'))
+    load(fullfile(inputFolder,'EstimationParameters.mat'));
+else
+    error('Please set the estimation parameters first!')
+end
+days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
+DayConfig=DataQueryParameter.DaySetting; % Day
+currentTime=str2double(DataQueryParameter.TimeSetting)*3600; % Time
+SelectedDayID=find(ismember(days,DayConfig)==1);
+interval=str2double(EstimationParameters.SearchIntervalEstimation);
+Median=DataQueryParameter.UseMedian;
+switch Median
+    case 'Yes'
+        UseMedianOrNot=1;
+    case 'No'
+        UseMedianOrNot=0;
+end
+queryMeasures=struct(...
+    'year',     nan,...
+    'month',    nan,...
+    'day',      nan,...
+    'dayOfWeek',SelectedDayID-1,...
+    'median', UseMedianOrNot,...
+    'timeOfDay', [currentTime-interval currentTime]); % Use a longer time interval to obtain more reliable data
 
-disp('*********************************************')
-disp('Step 3/7: Loading the Signal Data Providers!')
-disp('*********************************************')
-% simSignal data provider
-dp_signal_sim=simSignal_data_provider;
-dp_signal_field=fieldSignal_data_provider;
-
-disp('*********************************************')
-disp('Step 4/7: Collecting active control plans!')
-disp('*********************************************')
-DayConfig=get(handles.DayConfig,'String');
-currentTime=str2double(get(handles.TimeStampConfig,'String'))*3600;
+% Signal data providers
+dp_signal_sim=simSignal_data_provider; % Simulation signal
+dp_signal_field=fieldSignal_data_provider(inputFolder); % Field signal
 type=struct(...
     'ControlPlanSource',        'FromAimsun',...
     'LastCycleInformation',     'None');
@@ -648,179 +717,158 @@ dp_signal_field.LastCycleInformation=type.LastCycleInformation;
 [dp_signal_field.activeControlPlans]=dp_signal_field...
     .get_active_control_plans_for_given_day_and_time(DayConfig,currentTime,type.ControlPlanSource);
 
-% Generate vehicles
-disp('*********************************************')
-disp('Step 5/7: Collecting default parameters!')
-disp('*********************************************')
-VehicleLength=str2double(get(handles.VehicleLength,'String'));
-JamSpacing=str2double(get(handles.JamSpacing,'String'));
-Headway=str2double(get(handles.Headway,'String'));
+% simVehicle data provider
+inputFolderLocation=findFolder.temp_aimsun_whole();
+dp_vehicle=simVehicle_data_provider(inputFolderLocation);
 
+% Beats data provider
+ptr_beats=simBEATS_data_provider;
+
+% Vehicle parameters
+if(exist(fullfile(inputFolder,'VehicleParameters.mat'),'file'))
+    load(fullfile(inputFolder,'VehicleParameters.mat'));
+else
+    error('Please set the vehicle parameters first!')
+end
+VehicleLength=str2double(VehicleParameters.DefaultVehicleLength);
+JamSpacing=str2double(VehicleParameters.DefaultJamSpacing);
+Headway=str2double(VehicleParameters.DefaultHeadway);
 defaultParams=struct(... % Default parameters
     'VehicleLength', VehicleLength,...
     'JamSpacing', JamSpacing,...
     'Headway', Headway);
 
-SearchInitializationConfig=str2double(get(handles.SearchInitializationConfig,'String'));
-DistanceToEnd=str2double(get(handles.DistanceToEnd,'String'));
-querySetting=struct(... % Query settings
-    'SearchTimeDuration', SearchInitializationConfig,...
-    'Distance', DistanceToEnd);
+% Load the estStateQueue file
+dp_StateQueue=load_estStateQueue_data; % With empty input: Default folder ('data\estStateQueueData')
+% Estimated queues
+estStateQueue=dp_StateQueue.parse_csv('AimsunQueueEstimated.csv',dp_StateQueue.folderLocation);
+% BEATS Simulation;
+beatsEstimates=csvread(fullfile(dp_StateQueue.folderLocation,'EstimationResultsBeats.csv'));
 
-disp('*********************************************')
-disp('Step 6/7: Generating Vehicles!')
-disp('*********************************************')
-inputFolder=findFolder.objects();
-outputLocation=findFolder.aimsun_initialization();
-load(fullfile(inputFolder,'recAimsunNet.mat'))
-dp_initialization=initialization_in_aimsun(recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan); % Currently missing field signal data provider
-vehicleList=dp_initialization.generate_vehicle(querySetting);
-set(handles.InitializationTable,'Data',vehicleList);
-dlmwrite(fullfile(outputLocation,'VehicleInfEstimation.csv'), vehicleList, 'delimiter', ',', 'precision', 9);
-
-disp('*********************************************')
-disp('Step 7/7: Determining Signal Phases!')
-disp('*********************************************')
-[phaseListTable,phaseListAimsun]=dp_initialization.determine_phases(type);
-set(handles.PhaseDeterminationTable,'Data',phaseListTable);
-dlmwrite(fullfile(outputLocation,'SignalInfEstimation.csv'), phaseListAimsun, 'delimiter', ',', 'precision', 9);
-
-disp('*********************************************')
-disp('Done!')
-disp('*********************************************')
-clc
-disp('*******************************************************')
-disp('***************Running State Estimation!***************')
-disp('*******************************************************')
-
-inputFolder=findFolder.objects();
-load(fullfile(inputFolder,'recAimsunNet.mat'))
-
-% Generate the configuration of approaches for traffic state estimation
-appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
-
-%% Run state estimation
-%Get the data provider
-ptr_sensor=sensor_count_provider;
-ptr_midlink=midlink_count_provider;
-ptr_turningCount=turning_count_provider;
-
-% Default settings
-days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
-DayConfig=get(handles.DayConfig,'String');
-SelectedDayID=find(ismember(days,DayConfig)==1);
-from=str2double(get(handles.TimeStampConfig,'String'))*3600;
-to=from;  % Ending time
-interval=str2double(get(handles.SearchEstimationConfig,'String'));
-Median=get(handles.MedianConfig,'String');
-switch Median
-    case 'Yes'
-        UseMedianOrNot=1;
-    case 'No'
-        UseMedianOrNot=0;
+%% Get the activated signal phases
+if(handles.InitializationPhase.Value==1)
+    disp('*********************************************')
+    disp('*****Determining Signal Phases***************')
+    disp('*********************************************')
+    
+    outputLocation=findFolder.aimsun_initialization();
+    dp_initialization=initialization_in_aimsun(recAimsunNet.networkData,...
+        estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan);
+    [PhaseListTable,phaseListAimsun]=dp_initialization.determine_phases(type);
+    save(fullfile(inputFolder,'PhaseListTable.mat'),'PhaseListTable'); % Saved for View
+    dlmwrite(fullfile(outputLocation,'SignalInfEstimation.csv'), phaseListAimsun,...
+        'delimiter', ',', 'precision', 9);
+    
+    disp('*********************************************')
+    disp('Done!')
+    disp('*********************************************')
+    
 end
 
-% Run state estimation
-est=state_estimation(appDataForEstimation,ptr_sensor,ptr_midlink,ptr_turningCount);
-appStateEst=[];
-folderLocation='C:\Users\Qijian_Gan\Documents\GitHub\L0\arterial_data_analysis\detector_health\data\estStateQueueData\';
-fileName='aimsun_queue_estimated.csv';
-for i=1:size(appDataForEstimation,1) % Loop for all approaches
-    for t=from:interval:to % Loop for all prediction intervals
-        queryMeasures=struct(...
-            'year',     nan,...
-            'month',    nan,...
-            'day',      nan,...
-            'dayOfWeek',SelectedDayID-1,...
-            'median', UseMedianOrNot,...
-            'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
+%% Generate simulated vehicles
+if(handles.InitializationVehicle.Value==1)
+    disp('*********************************************')
+    disp('*****Generating Simulated Vehicles***********')
+    disp('*********************************************')
+    dp_initialization=initialization_in_aimsun...
+        (recAimsunNet.networkData,estStateQueue,dp_vehicle,dp_signal_sim,dp_signal_field,defaultParams,nan);
+    dp_initialization_beats=initialization_in_aimsun_with_beats...
+        (BeatsNetwork.Data,dp_vehicle,ptr_beats,defaultParams,nan);
+    VehicleListTable=[];
+    % By default: VehicleFromSimulation==1
+    if(handles.VehicleFromField.Value==0 && handles.VehicleFromBEATS.Value==0)
+        % Only use aimsun simulation        
+        for i=1:size(recAimsunNet.networkData,1) % Loop for each approach
+            junctionSectionInf=recAimsunNet.networkData(i);
+            [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
+                (junctionSectionInf,dp_vehicle,querySetting,currentTime);
+            for j=1:size(statisticsSection,1)
+                [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
+                    (junctionSectionInf,statisticsSection(j).data,currentTime);
+                VehicleListTable=[VehicleListTable;tmpVehicleList];
+            end
+        end
+    elseif(handles.VehicleFromField.Value==1 && handles.VehicleFromBEATS.Value==0)
+        % Use field data and Aimsun results
+        VehicleListTable=dp_initialization.generate_vehicle(querySetting);
         
-        tmp_approach=appDataForEstimation(i);
-        [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
-        [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
-        [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
-        if (t==from)
-            approach=tmp_approach;
-        else
-            approach.decision_making=[approach.decision_making;tmp_approach.decision_making];
-        end
+    elseif(handles.VehicleFromField.Value==0 && handles.VehicleFromBEATS.Value==1)
+        % If use BEATS and Aimsun results
+        % Get the BEATS network
+        AimsunWithBEATSMapping=BeatsNetwork.Data.AimsunWithBEATSMapping;
+        sectionsAimsunInBeats=[AimsunWithBEATSMapping.AimsunLinkID]';
+        
+        for i=1:size(recAimsunNet.networkData,1) % Loop for each approach
+            junctionSectionInf=recAimsunNet.networkData(i);
+            sections=junctionSectionInf.SectionBelongToApproach.ListOfSections;
+            [idx,address]=ismember(sections,sectionsAimsunInBeats);
+            [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
+                (junctionSectionInf,dp_vehicle,querySetting,currentTime);
+
+            for j=1:size(statisticsSection,1)
+                if(idx(j)==0)
+                    [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
+                        (junctionSectionInf,statisticsSection(j).data,currentTime);
+                else
+                    [tmpVehicleList]=dp_initialization_beats.generate_vehicles_for_a_link...
+                        (AimsunWithBEATSMapping(address(j),:),queryMeasures,querySetting,currentTime);
+                    if(isempty(tmpVehicleList))
+                        fprintf('No simulated vehicles generated from BEATS for link %d, use Aimsun simulation results instead\n',sections(j));
+                        [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
+                            (junctionSectionInf,statisticsSection(j).data,currentTime);
+                    end
+                end
+                VehicleListTable=[VehicleListTable;tmpVehicleList];
+            end
+        end        
+    else
+        % If use BEATS, Field data, and Aimsun results
+        % Get the BEATS network
+        AimsunWithBEATSMapping=BeatsNetwork.Data.AimsunWithBEATSMapping;
+        sectionsAimsunInBeats=[AimsunWithBEATSMapping.AimsunLinkID]';
+        
+        % Divided the network data to two parts: signalized and
+        % unsignalized
+        junctionSignalizedIdx=[recAimsunNet.networkData.Signalized]';
+        networkDataSignalized=recAimsunNet.networkData(junctionSignalizedIdx==1,:);
+        networkDataUnsignalized=recAimsunNet.networkData(junctionSignalizedIdx~=1,:);
+        
+        dp_initialization.networkData=networkDataSignalized;
+        
+        VehicleListTable=dp_initialization.generate_vehicle(querySetting);
+        
+        for i=1:size(networkDataUnsignalized,1) % Loop for each approach
+            junctionSectionInf=networkDataUnsignalized(i);
+            sections=junctionSectionInf.SectionBelongToApproach.ListOfSections;
+            [idx,address]=ismember(sections,sectionsAimsunInBeats);
+            [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
+                (junctionSectionInf,dp_vehicle,querySetting,currentTime);
+
+            for j=1:size(statisticsSection,1)
+                if(idx(j)==0)
+                    [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
+                        (junctionSectionInf,statisticsSection(j).data,currentTime);
+                else
+                    [tmpVehicleList]=dp_initialization_beats.generate_vehicles_for_a_link...
+                        (AimsunWithBEATSMapping(address(j),:),queryMeasures,querySetting,currentTime);
+                    if(isempty(tmpVehicleList))
+                        fprintf('No simulated vehicles generated from BEATS for link %d, use Aimsun simulation results instead\n',sections(j));
+                        [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
+                            (junctionSectionInf,statisticsSection(j).data,currentTime);
+                    end
+                end
+                VehicleListTable=[VehicleListTable;tmpVehicleList];
+            end
+        end        
     end
-    appStateEst=[appStateEst;approach];
+    
+    save(fullfile(inputFolder,'VehicleListTable.mat'),'VehicleListTable'); % Saved for View
+    outputFolder=findFolder.aimsun_initialization;
+    dlmwrite(fullfile(outputFolder,'VehicleInfEstimation.csv'), VehicleListTable, 'delimiter', ',', 'precision', 9);
+    disp('*********************************************')
+    disp('Done!')
+    disp('*********************************************')
 end
-sheetName=DayConfig;
-Table=est.extract_to_csv(appStateEst,folderLocation,fileName);
-save(sprintf('appStateEst_%s.mat',DayConfig),'appStateEst');
-
-
-
-%% Load the network information file
-% Aimsun
-InputFolder=findFolder.aimsunNetwork_data_whole();
-dp_network_Aimsun=load_aimsun_network_files(InputFolder); 
-if(exist(fullfile(InputFolder,'SectionInf.txt'),'file'))
-    sectionData=dp_network_Aimsun.parse_sectionInf_txt('SectionInf.txt');
-else
-    error('Cannot find the section information file in the folder!')
-end
-
-%BEATS
-dp_network_BEATS=load_BEATS_network;
-data.XMLNetwork=dp_network_BEATS.parse_BEATS_network_files('210E_for_estimation_v5_links_fixed.xml');
-data.XMLMapping=dp_network_BEATS.parse_BEATS_network_files('link_id_map_450.csv');
-data.BEATSWithAimsunMapping=dp_network_BEATS.parse_BEATS_network_files('BEATSLinkTable.csv');
-data.AimsunWithBEATSMapping=dp_network_BEATS.transfer_beats_to_aimsun(data.BEATSWithAimsunMapping,sectionData,data.XMLMapping,data.XMLNetwork);
-
-%% Initialization
-% Beats data provider
-ptr_beats=simBEATS_data_provider; 
-
-% simVehicle data provider
-inputFileLoc=findFolder.temp_aimsun_whole;
-dp_vehicle=simVehicle_data_provider(inputFileLoc); 
-
-defaultParams=struct(... % Default parameters
-    'VehicleLength', 17,...
-    'JamSpacing', 24,...
-    'Headway', 2);
-
-querySetting=struct(... % Query settings
-    'SearchTimeDuration', 30*60,...
-    'Distance', 60);
-
-dp_initialization_beats=initialization_in_aimsun_with_beats(data,dp_vehicle,ptr_beats,defaultParams,nan);
-
-% Default settings
-days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'}; 
-from=7.5*3600; % Starting time
-to=7.5*3600;  % Ending time
-interval=300;
-
-aimsunWithBeatsInitialization=dp_initialization_beats.networkData.AimsunWithBEATSMapping;
-vehListWithBeats=[];
-for day=8:8 % Weekday   
-    for i=1:size(aimsunWithBeatsInitialization,1) % Loop for all approaches 
-        for t=from:interval:to % Loop for all prediction intervals
-            queryMeasures=struct(...
-                'year',     nan,...
-                'month',    nan,...
-                'day',      nan,...
-                'dayOfWeek',day,...
-                'median', 1,...
-                'timeOfDay', [t t+interval]); % Use a longer time interval to obtain more reliable data
-            
-            [tmpVehList]=dp_initialization_beats.generate_vehicles_for_a_link...
-                (aimsunWithBeatsInitialization(i),queryMeasures,querySetting,t);
-            vehListWithBeats=[vehListWithBeats;tmpVehList];                
-        end
-    end
-end
-outputFolder=findFolder.aimsun_initialization;
-dlmwrite(fullfile(outputFolder,'VehicleInfEstimation.csv'), vehListWithBeats, 'delimiter', ',', 'precision', 9); 
-
-handles.appStateEst=appStateEst;
-handles.recAimsunNet=recAimsunNet;
-guidata(hObject, handles)
-set(handles.EstimationTable,'Data',Table);
 
 % --- Executes on button press in ViewInitialization.
 function ViewInitialization_Callback(hObject, eventdata, handles)
@@ -828,6 +876,16 @@ function ViewInitialization_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+if(handles.InitializationPhase.Value==1 && handles.InitializationVehicle.Value==1)
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\VehiclePhaseTable.m'));
+elseif(handles.InitializationPhase.Value==1 && handles.InitializationVehicle.Value==0)
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\PhaseTable.m'));
+elseif(handles.InitializationPhase.Value==0 && handles.InitializationVehicle.Value==1)
+    here = fileparts(mfilename('fullpath'));
+    run(fullfile(here,'\Subfig\VehicleTable.m'));
+end
 
 
 %% Run Aimsun Replication
@@ -837,11 +895,25 @@ function RunAimsun_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-FileLocation=get(handles.AimsunFileLocation,'String');
+%Aimsun
+tmpFileFolder=findFolder.GUI_temp();
+fileName=fullfile(tmpFileFolder,'AimsunProjectSetting.mat');
+if(exist(fileName,'file'))
+    load(fileName); % Variable: AimsunProjectSetting
+else
+    error('Can not find the Aimsun project settings!')
+end
+fileName=fullfile(tmpFileFolder,'ReplicationID.mat');
+if(exist(fileName,'file'))
+    load(fileName); % Variable: ReplicationID
+else
+    error('Can not find the setting of replication ID!')
+end
+
+FileLocation=AimsunProjectSetting.FileLocation;
 NameOfPythonCode='AimsunReplication.py';
-AimsunFile=get(handles.AimsunProjectName,'String');
-ReplicationID=get(handles.ReplicationID,'String');
-dos(sprintf('aimsun.exe -script %s %s %s',fullfile(FileLocation,NameOfPythonCode),...
+AimsunFile=AimsunProjectSetting.AimsunFile;
+dos(sprintf('aimsun.exe -script %s %s %d',fullfile(FileLocation,NameOfPythonCode),...
     fullfile(FileLocation,AimsunFile),ReplicationID));
 
 % --- Executes on button press in SetReplicationID.
@@ -851,3 +923,5 @@ function SetReplicationID_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 here = fileparts(mfilename('fullpath'));
 run(fullfile(here,'\Subfig\SetReplicationID.m'));
+
+

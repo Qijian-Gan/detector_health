@@ -101,7 +101,7 @@ function SaveReplicationID_Callback(hObject, eventdata, handles)
 % hObject    handle to SaveReplicationID (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-ReplicationID=handles.ReplicationID.Value;
+ReplicationID=str2double(handles.ReplicationID.String);
 
 outputLocation=findFolder.GUI_temp;
 save(fullfile(outputLocation,'ReplicationID.mat'),'ReplicationID');

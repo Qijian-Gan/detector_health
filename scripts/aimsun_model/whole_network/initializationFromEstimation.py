@@ -1,12 +1,19 @@
 from AAPI import *
 import csv
 import datetime
+import os
 
-vehInfFileName =\
-	'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis/detector_health/data/aimsun_initialization/VehicleInfEstimation.csv'
-
-sigInfFileName =\
-	'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis/detector_health/data/aimsun_initialization/SignalInfEstimation.csv'
+#vehInfFileName =\
+#	'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis/detector_health/data/aimsun_initialization/VehicleInfEstimation.csv'
+#sigInfFileName =\
+#	'C:/Users/Qijian_Gan/Documents/GitHub/L0/arterial_data_analysis/detector_health/data/aimsun_initialization/SignalInfEstimation.csv'
+	
+currentFolder=os.getcwd()
+subFolders=currentFolder.split("scripts")
+vehInfFileName=os.path.join(subFolders[0],"data/aimsun_initialization/VehicleInfEstimation.csv")
+sigInfFileName=os.path.join(subFolders[0],"data/aimsun_initialization/SignalInfEstimation.csv")
+print vehInfFileName
+print sigInfFileName
 
 def AAPILoad():
 	return 0

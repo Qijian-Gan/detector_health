@@ -53,8 +53,7 @@ classdef fieldSignal_data_provider
             end
             
             % Get the control plans and master control plans in Aimsun
-            inputFolder=findFolder.objects();
-            load(fullfile(inputFolder,'recAimsunNet.mat'))
+            load(fullfile(this.inputFolderLocation,'recAimsunNet.mat'))
             this.AimsunControlPlans=recAimsunNet.controlPlanAimsun;
             this.AimsunMasterControlPlans=recAimsunNet.masterControlPlanAimsun;
             

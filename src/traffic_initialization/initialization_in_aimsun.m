@@ -413,35 +413,50 @@ classdef initialization_in_aimsun
             
             Turns=junctionSectionInf.TurningBelongToApproach.TurningsAtFirstSectionFromLeftToRight;
             TurningProperty=junctionSectionInf.TurningBelongToApproach.TurningProperty;
-            numTurns=length(Turns);
+            TurnDescriptions={TurningProperty.Description}';
+            [TurnDescriptionsExceptUTurn,idxTurn]=unique(TurnDescriptions);
+            numTurns=length(TurnDescriptionsExceptUTurn);
             
-            centroidLaneByDownSection=staticsSection(1).centroidLaneByDownSection;
+            centroidLaneByDownSection=staticsSection(1).centroidLaneByDownSection; % Only get the first link information
             downSections=[centroidLaneByDownSection.downSectionID]';
             for i=1:numTurns % Loop for each turn
-                TurnID=Turns(i); % Get the turn ID
-                nextSectionByTurn=TurningProperty(i).DestSectionID; % Get the downstream section ID of that turn
-                [~,idx]=ismember(nextSectionByTurn,downSections);
+                [idx,loc]=ismember(TurnDescriptions,TurnDescriptionsExceptUTurn(i));
+                TurnID=Turns(idx); % Get the turn IDs
+                nextSectionByTurn=[TurningProperty(idx).DestSectionID]'; % Get the downstream section IDs of the turns
+                clear idx
                 
-                if(sum(idx))
-                    ODcentroidAndLane=centroidLaneByDownSection(idx).ODcentroidAndLane;
+                ODcentroidAndLane=[];
+                vehTurnIDs=[];
+                for j=1:length(TurnID) % Loop for each sub-turn                    
+                    [idx,loc]=ismember(downSections,nextSectionByTurn(j));
+                    if(sum(idx)) % If found                        
+                        ODcentroidAndLane=[ODcentroidAndLane;...
+                            centroidLaneByDownSection(idx).ODcentroidAndLane];
+                        vehTurnIDs=[vehTurnIDs;TurnID(j)*ones(size(ODcentroidAndLane,1),1)];
+                    else % If not
+                        fprintf('No OD data available for Junction: %d--Section: %d--Turn ID: %d in the given time period!\n',JunctionID,SectionID,TurnID(j));
+                    end
+                end
+                
+                if(~isempty(ODcentroidAndLane))                    
                     totODcentroidAndLane=size(ODcentroidAndLane,1);
                     numVehByTurn=CurrentVehNum(i);
                     
                     if(numVehByTurn<totODcentroidAndLane)
                         idx=randsample(totODcentroidAndLane,numVehByTurn);
                         ODcentroidAndLaneSelected=ODcentroidAndLane(idx,:);
+                        vehTurnIDSelected=vehTurnIDs(idx);
                     else
                         idx=randsample(totODcentroidAndLane,numVehByTurn,'true'); % With replacement
                         ODcentroidAndLaneSelected=ODcentroidAndLane(idx,:);
+                        vehTurnIDSelected=vehTurnIDs(idx);
                     end
                     
                     % The last column is the turn ID, which will be used
                     % later in assigning vhicles to other lanes if their
                     % dedicated lanes are full
                     vehWithODAndLane=[vehWithODAndLane;[SectionID*ones(size(ODcentroidAndLaneSelected,1),1), ODcentroidAndLaneSelected(:,1),...
-                        1*ones(size(ODcentroidAndLaneSelected,1),1), ODcentroidAndLaneSelected(:,2:end)],TurnID*ones(size(ODcentroidAndLaneSelected,1),1)];
-                else
-                    fprintf('No OD data available for Junction: %d--Section: %d--Turn ID: %d in the given time period!\n',JunctionID,SectionID,TurnID);
+                        1*ones(size(ODcentroidAndLaneSelected,1),1), ODcentroidAndLaneSelected(:,2:end)],vehTurnIDSelected];
                 end
                 
             end
