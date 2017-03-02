@@ -1,83 +1,97 @@
 <html>
 <head>
-
+<title>PATHSim</title>
 <!--**************Load the JS files********************** -->
-<script src="http://openlayers.org/api/OpenLayers.js"></script>  
+<script src="http://openlayers.org/api/OpenLayers.js"></script>
 <script src="direction.js"></script>
 <script src="mapEditor.js"></script>
 <script src="mapDisplay.js"></script>
 
 </head>
 
-<body onload="init()">    
-    <div id="map" style="width: 100%; height: 500px;"></div>
-     <input type="checkbox" name="snapping" id="snapping" checked="checked" onclick="snapping_check()"/>
-    <label for="snapping">Enable Snapping</label>
-    <table border="0">
-    <tr height="auto" valign="top">
-    <td>
-    <fieldset>
-    <legend>Network Editor</legend>
-    <ul id="controlToggle">
-   
-        <li>
-            <input type="radio" name="type" value="none" id="noneToggle"
-                   onclick="toggleControl(this);" checked="checked" />
-            <label for="noneToggle">navigate</label>
-        </li>
-        <li>
-            <input type="radio" name="type" value="line" id="lineToggle"
-                   onclick="toggleControl(this);" />
-            <label for="lineToggle">draw line</label>
-        </li>
-        <li>
-            <input type="radio" name="type" value="select" id="selectToggle"
-                   onclick="toggleControl(this);" />
-            <label for="selectToggle">select feature (<span id="counter">0</span> selected)</label>
-        </li>
-        <li><input type="button" value="Delete Selected" onclick="removeFeature()"/> </li>
-        <li><input type=button value="Update Direction" onClick="updateDirection()" /></li>
-        <li><input type=button value="Get Link File" onclick="getLinkFile()"/></li>
-        <li><input type=button value="Get Demand File" onclick="getDemand()"/></li>
-        <li><input type=button value="Get TP File" onclick="getTP()"/></li>
-        <li><input type=button value="Get Lat/Long File" onclick="getLatLong()"/> </li>
-    </ul>
-    </fieldset>
-    <td>
-        <fieldset>
-        <legend>Link Settings</legend>
-        <form>
-        Link Type: 
-        <select id="link_type" onchange="onChange()">
-        <option value = 2>Freeway</option>
-        <option value = 3>HOV/HOT</option>
-        <option value = 4>FF connector</option>
-        <option value = 5>On/Off ramp</option>
-        <option value = 6>Local arterial</option>
-        <option value = 7>Local street</option>
-        </select><br>
-        Maximum speed(m/h):<input type="number" id="max_sd" value="60"><br>
-        Capacity(/lane/hour):<input type="number" id="cap" value="2000"><br>
-        Jammed density (/mile):<input type="number" id="jd" value="220"><br>
-        Number of Lanes:<input type="number" id="lane" value="2">
-        </form>
-        </fieldset>
-    </td>
-    <td>
-    <fieldset>
-    <legend>Simulation</legend>
-    <label for="input">Network File</label><input type="file" id="netInput"/><br>
-    <label for="input">Speed File</label><input type="file" id="speedInput"/><br>
-    <button id="parse" onclick="">Parse Files</button><br> 
-    <div id="rangeControl"></div><br>
-    </fieldset>
+<body onload="init()">	
+	<!-- *****************Load the logos ***************-->
+	<!--<img src="I:\Dropbox\WorkAtBerkeley\Programs\detector_health\src\map_editing\Logos\Logo.png"
+	align="right" width=10% height=8%/>
+	  <img src="I:\Dropbox\WorkAtBerkeley\Programs\detector_health\src\map_editing\Logos\Path_logo_0.jpg"
+	align="right" width=10% height=8%/>	
+	-->
+	<h1 align="center">  <font face="Comic sans MS" size="10" color="blue">PATHSim </font>
+	
+	</h1>
+	
+	<div id="map" style="width: 100%; height: 500px;"></div>
+	<input type="checkbox" name="snapping" id="snapping" checked="checked"
+		onclick="snapping_check()" />
+	<label for="snapping">Enable Snapping</label>
+	<table border="0">
+		<tr height="auto" valign="top">
+			<td>
+				<fieldset>
+					<legend>Network Editor</legend>
+					<ul id="controlToggle">
 
-    </td>
-    </tr>
-    </table>
-    <div>
-    <textarea id="output" cols="100", rows ="30">Output zone</textarea>
-    </div>
-    
-    
-  </body>
+						<li><input type="radio" name="type" value="none"
+							id="noneToggle" onclick="toggleControl(this);" checked="checked" />
+							<label for="noneToggle">navigate</label></li>
+						<li><input type="radio" name="type" value="line"
+							id="lineToggle" onclick="toggleControl(this);" /> <label
+							for="lineToggle">draw line</label></li>
+						<li><input type="radio" name="type" value="select"
+							id="selectToggle" onclick="toggleControl(this);" /> <label
+							for="selectToggle">select feature (<span id="counter">0</span>
+								selected)
+						</label></li>
+						<li><input type="button" value="Delete Selected"
+							onclick="removeFeature()" /></li>
+						<li><input type=button value="Update Direction"
+							onClick="updateDirection()" /></li>
+						<li><input type=button value="Get Link File"
+							onclick="getLinkFile()" /></li>
+						<li><input type=button value="Get Demand File"
+							onclick="getDemand()" /></li>
+						<li><input type=button value="Get TP File" onclick="getTP()" /></li>
+						<li><input type=button value="Get Lat/Long File"
+							onclick="getLatLong()" /></li>
+					</ul>
+				</fieldset>
+			<td>
+				<fieldset>
+					<legend>Link Settings</legend>
+					<form>
+						Link Type: <select id="link_type" onchange="onChange()">
+							<option value=2>Freeway Mainline</option>
+							<option value=3>HOV/HOT Lanes</option>
+							<option value=4>FF connector</option>
+							<option value=5>On/Off ramp</option>
+							<option value=6>Local arterial</option>
+							<option value=7>Local street</option>
+						</select><br> Maximum speed(m/h):<input type="number" id="max_sd"
+							value="60"><br> Capacity(/lane/hour):<input
+							type="number" id="cap" value="2000"><br> Jammed
+						density (/mile):<input type="number" id="jd" value="220"><br>
+						Number of Lanes:<input type="number" id="lane" value="2">
+					</form>
+				</fieldset>
+			</td>
+			<td>
+				<fieldset>
+					<legend>Simulation</legend>
+					<label for="input">Network File</label><input type="file"
+						id="netInput" /><br> <label for="input">Speed File</label><input
+						type="file" id="speedInput" /><br>
+					<button id="parse" onclick="">Parse Files</button>
+					<br>
+					<div id="rangeControl"></div>
+					<br>
+				</fieldset>
+
+			</td>
+		</tr>
+	</table>
+	<div>
+		<textarea id="output" cols="100" , rows="30">Output zone</textarea>
+	</div>
+
+
+</body>

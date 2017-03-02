@@ -456,6 +456,12 @@ if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file'))
 else
     error('Please set the estimation parameters first!')
 end
+% Vehicle parameters
+if(exist(fullfile(inputFolder,'VehicleParameters.mat'),'file'))
+    load(fullfile(inputFolder,'VehicleParameters.mat'));
+else
+    error('Please set the vehicle parameters first!')
+end
 
 % Default settings
 days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
@@ -479,6 +485,15 @@ queryMeasures=struct(...
     'median', UseMedianOrNot,...
     'timeOfDay', [from-interval from]); % Use a longer time interval to obtain more reliable data
 
+% Get the default parameters
+default_params=EstimationParameters.default_params;
+default_params.vehicle_length=str2double(VehicleParameters.DefaultVehicleLength);
+default_params.saturation_headway=str2double(VehicleParameters.DefaultHeadway);
+default_params.start_up_lost_time=str2double(VehicleParameters.StartUpLostTime);
+default_params.jam_spacing=str2double(VehicleParameters.DefaultJamSpacing);
+
+default_proportions=EstimationParameters.default_proportions;
+
 if(handles.ArterialFieldData.Value==1)
     
     disp('*******************************************************')
@@ -495,6 +510,11 @@ if(handles.ArterialFieldData.Value==1)
     
     % Run state estimation
     est=state_estimation(appDataForEstimation,ptr_sensor,ptr_midlink,ptr_turningCount);
+    
+    % Overwrite the default parameters using the ones from the GUI inputs
+    est.default_params=default_params;
+    est.default_proportions=default_proportions;
+    
     appStateEst=[];
     folderLocation=findFolder.estStateQueue_data();
     fileName='AimsunQueueEstimated.csv';

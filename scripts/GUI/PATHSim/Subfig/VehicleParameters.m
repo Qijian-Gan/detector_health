@@ -22,7 +22,7 @@ function varargout = VehicleParameters(varargin)
 
 % Edit the above text to modify the response to help VehicleParameters
 
-% Last Modified by GUIDE v2.5 23-Feb-2017 22:05:42
+% Last Modified by GUIDE v2.5 01-Mar-2017 15:43:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -151,7 +151,8 @@ function SaveVehicleParameters_Callback(hObject, eventdata, handles)
 VehicleParameters=struct(...
     'DefaultVehicleLength',handles.DefaultVehicleLength.String,...
     'DefaultJamSpacing',handles.DefaultJamSpacing.String,...
-    'DefaultHeadway',handles.DefaultHeadway.String);
+    'DefaultHeadway',handles.DefaultHeadway.String,...
+    'StartUpLostTime', handles.StartUpLostTime.String);
 
 outputLocation=findFolder.GUI_temp;
 save(fullfile(outputLocation,'VehicleParameters.mat'),'VehicleParameters');
@@ -162,3 +163,26 @@ function ExitVehicleParameters_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 close(handles.figure1)
+
+
+
+function StartUpLostTime_Callback(hObject, eventdata, handles)
+% hObject    handle to StartUpLostTime (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of StartUpLostTime as text
+%        str2double(get(hObject,'String')) returns contents of StartUpLostTime as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function StartUpLostTime_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to StartUpLostTime (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
