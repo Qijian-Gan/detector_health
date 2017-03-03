@@ -199,26 +199,30 @@ classdef reconstruct_aimsun_network
     methods ( Static)
         
         function [appForEstimation]=get_approach_config_for_estimation(networkData)
+            %% This function is used to get the approach information for estimation (signalized)
             
             appForEstimation=[];
-            for i=1:size(networkData,1)
-                if(networkData(i).Signalized)
+            for i=1:size(networkData,1) % Loop for each approach
+                if(networkData(i).Signalized) % If it is signalized
+                    
+                    % Collect appoach geometric information
                     tmpAppForEstimation.intersection_name=networkData(i).JunctionName;
                     tmpAppForEstimation.intersection_id=networkData(i).JunctionID;
                     tmpAppForEstimation.city=networkData(i).City;
                     tmpAppForEstimation.intersection_extID=networkData(i).JunctionExtID;
                     tmpAppForEstimation.signalized=networkData(i).Signalized;
                     tmpAppForEstimation.road_name=networkData(i).FirstSectionName;
-                    tmpAppForEstimation.direction=int2str(networkData(i).FirstSectionID);
+                    tmpAppForEstimation.direction=int2str(networkData(i).FirstSectionID); % Use the section ID instead
                     tmpAppForEstimation.road_extID=(networkData(i).FirstSectionExtID);
                     
+                    % Collect detector information
                     tmpAppForEstimation.exclusive_left_turn=networkData(i).DetectorProperty.ExclusiveLeftTurn;
                     tmpAppForEstimation.exclusive_right_turn=networkData(i).DetectorProperty.ExclusiveRightTurn;
                     tmpAppForEstimation.advanced_detectors=networkData(i).DetectorProperty.AdvancedDetector;
                     tmpAppForEstimation.general_stopline_detectors=networkData(i).DetectorProperty.GeneralStoplineDetectors;
                     
                     % Get the turning movement indicator
-                    indicator=[0,0,0];
+                    indicator=[0,0,0]; % [Left-turn, Through, Right-turn]
                     for j=1:size(networkData(i).TurningBelongToApproach.TurningProperty)
                         if(~isempty(networkData(i).TurningBelongToApproach.TurningProperty(j).Description))
                             switch networkData(i).TurningBelongToApproach.TurningProperty(j).Description
@@ -233,6 +237,7 @@ classdef reconstruct_aimsun_network
                     end
                     tmpAppForEstimation.turnIndicator=indicator;
                     
+                    % Get the link properties
                     tmpAppForEstimation.link_properties=struct(...
                         'LinkLength',networkData(i).GeoDesign.LinkLength,...
                         'NumberOfLanes',networkData(i).GeoDesign.NumOfLanes,...
@@ -244,9 +249,16 @@ classdef reconstruct_aimsun_network
                         'Capacity', [],...
                         'MaxSpeed', []);
                     
+                    % Get default signal properties
                     tmpAppForEstimation.signal_properties=networkData(i).DefaultSigSetting;
+                    
+                    % Get control plan information
                     tmpAppForEstimation.controlPlan_properties=networkData(i).ControlPlanBelongJunction;
+                    
+                    % Get the midlink input file information
                     tmpAppForEstimation.midlink_properties=networkData(i).MidlinkCountConfig;
+                    
+                    % Turning count properties to be empty (at the initialization step)
                     tmpAppForEstimation.turning_count_properties=[];
                     
                     appForEstimation=[appForEstimation;tmpAppForEstimation];

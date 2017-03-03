@@ -4,10 +4,13 @@ classdef state_estimation
         approachConfig              % Approach-based configuration
         
         dataProvider_sensor         % Data provider: sensor
-        dataProvider_midlink        % Data provider: midlink count
-        dataProvider_turningCount   % Data provider: turning count
+        dataProvider_midlink        % Data provider: midlink count (historical manual counts)
+        dataProvider_turningCount   % Data provider: turning count (historical manual counts)
+        dataProvider_simVehicle     % Data provider: simulated vehicles (used to overwrite turning proportions)
+        dataProvider_signal_sim     % Data provider: signal settings from simulation
+        dataProvider_signal_field   % Data provider: signal settings from field (currently extracted from Aimsun)
         
-        default_params              % Default parameters
+        default_params              % Default parameters: can be determined through MATLAB GUI
         params                      % Current parameters
         
         default_proportions         % Default proportions of left-turn, through, and right-turn vehicles
@@ -15,19 +18,20 @@ classdef state_estimation
     
     methods ( Access = public )
         
-        function [this]=state_estimation(approachConfig,dataProvider_sensor, dataProvider_midlink, dataProvider_turningCount)
-            %% This function is to do the state estimation
+        function [this]=state_estimation(approachConfig,dataProvider_sensor, dataProvider_midlink, dataProvider_turningCount,...
+                dataProvider_simVehicle, dataProvider_signal_sim, dataProvider_signal_field)
+            %% This function is to do the state estimation for arterial approaches
             
             % Check the number of inputs
-            if(nargin<2)
+            if(nargin<2) % At lease two inputs
                 error('Not enough inputs!')
-            elseif(nargin>4)
+            elseif(nargin>7) % At most five inputs
                 error('Too many inputs!')
             end
                 
             % Check two most important inputs
             if(isempty(approachConfig)||isempty(dataProvider_sensor))
-                error('Wrong inputs');
+                error('Wrong inputs!');
             end            
             this.approachConfig=approachConfig;
             this.dataProvider_sensor=dataProvider_sensor;
@@ -39,6 +43,15 @@ classdef state_estimation
             if(nargin>3)
                 this.dataProvider_turningCount=dataProvider_turningCount;
             end
+            if(nargin>4)
+                this.dataProvider_simVehicle=dataProvider_simVehicle;
+            end
+            if(nargin>5)
+                this.dataProvider_signal_sim=dataProvider_signal_sim;
+            end
+            if(nargin>6)
+                this.dataProvider_signal_field=dataProvider_signal_field;
+            end            
 
             % Default values
             this.default_params=struct(...
@@ -59,7 +72,8 @@ classdef state_estimation
                 'jam_spacing',                               24,...         % Jam spacing (ft)
                 'distance_advanced_detector',                200,...        % Default distance to the stopbar (ft)
                 'left_turn_pocket',                          150,...        % Default left-turn pocket(ft)
-                'right_turn_pocket',                         100);          % default right-turn pocket(ft) 
+                'right_turn_pocket',                         100,...        % default right-turn pocket(ft)
+                'distanceToEnd',                             60);           % default distance to end of the link: used to defne turnings    
             
             % Default proportions for left-turn, through, and right-turn
             % movements for each type of detectors
@@ -82,11 +96,10 @@ classdef state_estimation
                 'Through_and_Right',                [0, 0.85, 0.15]);       % Stop-line detectors for through and right-turn movements
         end
         
-        %% Functions to get/update params and proportions        
+        %% Functions to get/update params and proportions    
         function [proportions]=update_vehicle_proportions(this,approach_in,queryMeasures)
             %% This function is to update vehicle proportions if possible
             
-            % *******Update the default values if possible
             % Get turning count data
             turning_count_properties=this.get_turning_count_for_approach(approach_in,queryMeasures);    
 
@@ -163,39 +176,268 @@ classdef state_estimation
             
         end
         
+        function [proportions]=update_vehicle_proportions_with_multiple_data_sources(this,...
+                approach_in,queryMeasures)
+            %% This function is to update vehicle proportions using multiple data sources if possible
+            
+            % Get turning count data (observed)
+            turningCountProperty=this.get_turning_count_for_approach(approach_in,queryMeasures); 
+            avgProportionFromTurnCount=turningCountProperty.avgProportion;
+            
+            % Get simulation count data
+            simulationCountProperty=this.get_simulation_count_for_approach(approach_in,queryMeasures);
+            avgProportionFromSimulationCount=simulationCountProperty.avgProportion;
+            
+            % Get sensor count data
+            sensorCountProperty=this.get_sensor_count_for_approach(approach_in,queryMeasures);
+            avgProportionFromSensorCount=sensorCountProperty.avgProportion;
+            
+            % If not empty: have turning count information
+            if(~isempty(avgProportionFromTurnCount))           
+                avgProportionLeft=avgProportionFromTurnCount(1);
+                avgProportionThrough=avgProportionFromTurnCount(2);
+                avgProportionRight=avgProportionFromTurnCount(3);
+                
+                % Update the proportions in the default settings
+                % All movements
+                proportions.Advanced=[avgProportionLeft,avgProportionThrough,avgProportionRight];
+                proportions.All_Movements=proportions.Advanced;
+                
+                % Through and Right
+                proportions.Advanced_Through_and_Right=...
+                    [0,avgProportionThrough/(avgProportionThrough+avgProportionRight),...
+                    avgProportionRight/(avgProportionThrough+avgProportionRight)];
+                proportions.Through_and_Right=proportions.Advanced_Through_and_Right;
+                
+                % Left and Through
+                proportions.Advanced_Left_and_Through=...
+                    [avgProportionLeft/(avgProportionThrough+avgProportionLeft),...
+                    avgProportionThrough/(avgProportionThrough+avgProportionLeft),0];
+                proportions.Left_and_Through=proportions.Advanced_Left_and_Through;
+                
+                % Left and Right
+                proportions.Advanced_Left_and_Right=...
+                    [avgProportionLeft/(avgProportionRight+avgProportionLeft),0,...
+                    avgProportionRight/(avgProportionRight+avgProportionLeft)];
+                proportions.Left_and_Right=proportions.Advanced_Left_and_Right;
+              
+                % Others
+                proportions.Left_Turn=[1,0,0];
+                proportions.Left_Turn_Queue=[0,0,0];
+                proportions.Right_Turn=[0,0,1];
+                proportions.Right_Turn_Queue=[0,0,0];
+                proportions.Advanced_Left_Turn=[1,0,0];
+                proportions.Advanced_Right_Turn=[0,0,1];
+                proportions.Advanced_Through=[0,1,0];
+                proportions.Through=[0,1,0];
+                
+            else % Not turning count information available
+                proportions=this.default_proportions;
+            end
+            
+        end
+        
+        
         %% ***************Functions to get data*****************
+        function [simulationCountProperty]=get_simulation_count_for_approach(this,approach_in,queryMeasures)
+           %% This function is used to get the turning information from simulated data in Aimsun
+           
+            AimsunSectionID=str2double(approach_in.direction);
+            dataVeh=this.dataProvider_simVehicle.get_statistics_for_section_time...
+                (AimsunSectionID, queryMeasures.timeOfDay, this.default_params.distanceToEnd);
+            
+            if(~isnan(dataVeh.data)) % Have simulated data
+                simulationCountProperty.data=dataVeh;
+                simulationCountProperty.avgProportion=[dataVeh.turning.Left,...
+                    1-dataVeh.turning.Left-dataVeh.turning.Right, dataVeh.turning.Right];
+            else % if not
+                simulationCountProperty.data=[];
+                simulationCountProperty.avgProportion=[];
+            end
+        end
+        
+        function [sensorCountProperty]=get_sensor_count_for_approach(this,approach_in,queryMeasures)
+            %% This function is used to get the turning information from sensor counts
+            
+            if(isempty(approach_in.advanced_detectors) ||(isempty(approach_in.exclusive_left_turn) &&...
+                    isempty(approach_in.exclusive_right_turn) && isempty(approach_in.general_stopbar_detectors)))
+                % We need to have a full map of advanced detectors
+                % We also need the set of stopbar detectors not empty!
+                sensorCountProperty.data=[];
+                sensorCountProperty.avgProportion=[];
+            else
+                % Get link properties
+                numberOfLanes=approach_in.link_properties.NumberOfLanes;
+                
+                % Get advanced detectors' data
+                [totalCountAdvanced, ~,effectiveTotalLanesAdvanced]=get_total_count_by_movement...
+                (this,approach_in,queryMeasures,'Advanced');
+                if(effectiveTotalLanesAdvanced==0) % No data or bad data
+                    sensorCountProperty.data=[];
+                    sensorCountProperty.avgProportion=[];
+                    return;
+                else % Rescale the data                    
+                    totalCountAdvanced=totalCountAdvanced*numberOfLanes/effectiveTotalLanes;
+                end
+                
+                % Get exclusive left turn data                
+                [totalCountLeft, ~,~]=get_total_count_by_movement(approach_in,queryMeasures,'Exclusive Left');
+                
+                % Get exclusive right turn data                
+                [totalCountRight, ~,~]=get_total_count_by_movement(approach_in,queryMeasures,'Excluive Right');
+                
+                % Get general stopbar data                
+                [totalCountGeneral, totalCountByMovement,~]=get_total_count_by_movement(approach_in,queryMeasures,'General Stopbar');
+                
+                
+            end
+            
+        end
+        
+        function [totalCount, totalCountByMovement,effectiveTotalLanes]=get_total_count_by_movement...
+                (this,approach_in,queryMeasures,movement)
+            %% This function is used to calculate the counts for different movements for different types of detectors
+            
+            totalCount=0;
+            totalLanes=0;
+            totalCountByMovement=[0,0,0];
+            effectiveTotalLanes=0;
+            % Get the detectors by movement
+            switch movement
+                case 'Advanced'
+                    detectors=approach_in.advanced_detectors;
+                case 'Exclusive Left'
+                    detectors=approach_in.exclusive_left_turn;
+                case 'Exclusive Right'
+                    detectors=approach_in.exclusive_right_turn;
+                case 'General Stopbar'
+                    detectors=approach_in.general_stopline_detectors;
+                otherwise
+                    error('Wrong detector movements!')
+            end
+            
+            % Loop for each movement
+            for i=1:size(detectors,1)  % There may be different types of detectors
+                totalLanes=totalLanes+sum(detectors(i).NumberOfLanes);
+                [tmpTotalCount, tmpEffectiveTotalLanes, tmpTotalCountByMovement]=get_total_count_by_detector_type...
+                    (detectors(i,:),queryMeasures,movement);
+                totalCount=totalCount+tmpTotalCount;
+                totalCountByMovement=totalCountByMovement+tmpTotalCountByMovement;
+                effectiveTotalLanes=effectiveTotalLanes+tmpEffectiveTotalLanes;
+            end
+            if(effectiveTotalLanes~=0)
+                totalCount=totalCount*totalLanesLeft/effectiveTotalLanesLeft;
+                totalCountByMovement=totalCountByMovement*totalLanesLeft/effectiveTotalLanesLeft;
+            end
+
+        end
+        
+        function [totalCount, effectiveTotalLanes, totalCountByMovement]=get_total_count_by_detector_type...
+                (this,detectors,queryMeasures,type)
+            %% This function is used to calculate the counts for different movements for different types of detectors
+            
+            listOfDetectors=cellstr(detectors.IDs);
+            detectorData=this.dataProvider_sensor.clustering(listOfDetectors, queryMeasures);
+            
+            totalCount=0;
+            effectiveTotalLanes=0;
+            totalCountByMovement=[0, 0, 0];
+            
+            for i=1:size(detectorData,1) % Loop for each detector belonging to the same movement type
+                switch detectorData(i).status
+                    case 'Good Data' % If it is good data
+                        countByDetector=mean(detectorData(i).data.s_volume)*detectors.NumberOfLanes(i);
+                        
+                        totalCount=totalCount+countByDetector;
+                        effectiveTotalLanes=effectiveTotalLanes+detectors.NumberOfLanes(i);
+                        
+                        if(type=='General Stopbar') % If it is general stopbar detectors
+                            detectorMovement=detector.Movement;     % Check the movements  
+                            % Get the proportions
+                            [proportionLeft]=state_estimation.find_traffic_proportion...
+                                (detectorMovement,default_proportion,'Left');                            
+                            [proportionThrough]=state_estimation.find_traffic_proportion...
+                                (detectorMovement,default_proportion,'Through');
+                            [proportionRight]=state_estimation.find_traffic_proportion...
+                                (detectorMovement,default_proportion,'Right');
+                            
+                            % Update the counts
+                            totalCountByMovement(1)=totalCountByMovement(1)+countByDetector*proportionLeft;
+                            totalCountByMovement(2)=totalCountByMovement(2)+countByDetector*proportionThrough;
+                            totalCountByMovement(3)=totalCountByMovement(3)+countByDetector*proportionRight;
+                        end
+                end
+            end
+
+        end
+        
         function [turning_count_properties]=get_turning_count_for_approach(this,approach_in, queryMeasures)
             % This function is to get turning count data for a given
             % approach with given query measures
             
-            % Get the file name            
-            TPFileMatch=this.dataProvider_turningCount.FieldAimsunFileMatch;
+            % Get the file name        
             currentFile=sprintf('TP_%s_%s_%s',approach_in.intersection_name,...
                 strrep(approach_in.road_name,' ', '_'),approach_in.direction);
+            % Note: In Aimsun, we don't know the physical approach direction, so
+            % we use the first section's ID as the indicator of direction.
+            % Therefore, we need this mapping file
+            TPFileMatch=this.dataProvider_turningCount.FieldAimsunFileMatch;            
             idx=ismember(TPFileMatch(:,2),currentFile);            
-            if(sum(idx))
+            if(sum(idx)) % If find the corresponding file name (field observed data)
                 fileName=sprintf('%s.mat',TPFileMatch{idx,1});
-            else
+            else % If not
                 fileName=sprintf('%s.mat',currentFile);
             end
             
             % If: for a particular date
             if(~isnan(queryMeasures.year)&&~isnan(queryMeasures.month) && ~isnan(queryMeasures.day)) 
-                data_out=this.dataProvider_turningCount.get_data_for_a_date(fileName,queryMeasures);
+                data=this.dataProvider_turningCount.get_data_for_a_date(fileName,queryMeasures);
             else %Else: for historical data  
-                queryMeasures.timeOfDay=nan;
-                [data_out]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
+                queryMeasures.timeOfDay=nan; % Get all the data for the particular year,month, and day of week
+                [data]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
                 
-                if(isempty(data_out))
+                if(isempty(data)) % If still no data
                     % Do not specify year, month, and day of week
                     queryMeasures.year=nan;
                     queryMeasures.month=nan;
                     queryMeasures.dayOfWeek=nan;
-                    [data_out]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
+                    % Query the data again with the new settings
+                    [data]=this.dataProvider_turningCount.clustering(fileName, queryMeasures);
                 end
             end
+            turning_count_properties.data=data;
             
-            turning_count_properties.data=data_out;
+            turning_count_properties.avgProportion=[];
+            if(~isempty(data)) % If it is not empty!           
+                time=data.time; % Get the time
+                
+                totalVolume=sum(data.volume,2); % Get the total
+                proportionLeft=data.volume(:,1)./totalVolume; % Get the LT proportion
+                proportionThrough=data.volume(:,2)./totalVolume; % Get the through proportion
+                proportionRight=data.volume(:,3)./totalVolume; % Get the RT proportion
+                    
+                if(isnan(queryMeasures.timeOfDay)) % No specific time of day: average over all time stamps
+                    avgProportionLeft=mean(proportionLeft);
+                    avgProportionThrough=mean(proportionThrough);
+                    avgProportionRight=mean(proportionRight);
+                else % Given a specific time
+                    startTime=queryMeasures.timeOfDay(1);
+                    endTime=queryMeasures.timeOfDay(end);
+
+                    idx=(time>=startTime & time<endTime);
+                    
+                    if(sum(idx)==0) % Do not have data for that time period: average over all time stamps
+                        avgProportionLeft=mean(proportionLeft);
+                        avgProportionThrough=mean(proportionThrough);
+                        avgProportionRight=mean(proportionRight);
+                    else % Have data: average over the given time period
+                        avgProportionLeft=mean(proportionLeft(idx));
+                        avgProportionThrough=mean(proportionThrough(idx));
+                        avgProportionRight=mean(proportionRight(idx));
+                    end
+                end  
+                turning_count_properties.avgProportion=[avgProportionLeft,avgProportionThrough,avgProportionRight];
+            end
         end
         
         function [approach_out]=get_midlink_data_for_approach(this,approach_in, queryMeasures)

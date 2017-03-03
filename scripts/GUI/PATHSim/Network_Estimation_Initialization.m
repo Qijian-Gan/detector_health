@@ -433,37 +433,47 @@ function RunEstimation_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 clc
-inputFolder=findFolder.GUI_temp();
 disp('*******************************************************')
 disp('******Runing Estimation********************************')
 disp('*******************************************************')
-
 disp('*******************************************************')
 disp('******Collecting Data!*********************************')
 disp('*******************************************************')
-if(exist(fullfile(inputFolder,'recAimsunNet.mat'),'file'))
+
+inputFolder=findFolder.GUI_temp(); % This folder stores all temporary inputs from the Matlab GUI
+if(exist(fullfile(inputFolder,'recAimsunNet.mat'),'file')) % Load the aimsun network file
     load(fullfile(inputFolder,'recAimsunNet.mat'));
+    disp('Finish loading the Aimsun network files!')
 else
     error('Please extract and reconstruct the Aimsun network first!')
 end
-if(exist(fullfile(inputFolder,'DataQueryParameter.mat'),'file'))
+if(exist(fullfile(inputFolder,'DataQueryParameter.mat'),'file')) % Loading data query settings
     load(fullfile(inputFolder,'DataQueryParameter.mat'));
+    disp('Finish loading the data query settings!')
 else
     error('Please set the data query parameters first!')
 end
-if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file'))
+if(exist(fullfile(inputFolder,'EstimationParameters.mat'),'file')) % Loading estimation parameters
     load(fullfile(inputFolder,'EstimationParameters.mat'));
+    disp('Finish loading the estimation parameters!')
 else
     error('Please set the estimation parameters first!')
 end
-% Vehicle parameters
-if(exist(fullfile(inputFolder,'VehicleParameters.mat'),'file'))
+if(exist(fullfile(inputFolder,'VehicleParameters.mat'),'file')) % Loading vehicle parameters
     load(fullfile(inputFolder,'VehicleParameters.mat'));
+    disp('Finish loading the vehicle parameters!')
 else
     error('Please set the vehicle parameters first!')
 end
+if(exist(fullfile(inputFolder,'InitializationParameters.mat'),'file')) % Loading initialization parameters
+    load(fullfile(inputFolder,'InitializationParameters.mat'));
+    % Need to use this to define the turning
+    DistanceToEnd=str2double(InitializationParameters.DistanceToEndTurning); 
+else
+    DistanceToEnd=60;
+end
 
-% Default settings
+% Construct the query parameters
 days={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
 DayConfig=DataQueryParameter.DaySetting;
 SelectedDayID=find(ismember(days,DayConfig)==1);
@@ -491,43 +501,71 @@ default_params.vehicle_length=str2double(VehicleParameters.DefaultVehicleLength)
 default_params.saturation_headway=str2double(VehicleParameters.DefaultHeadway);
 default_params.start_up_lost_time=str2double(VehicleParameters.StartUpLostTime);
 default_params.jam_spacing=str2double(VehicleParameters.DefaultJamSpacing);
+default_params.distanceToEnd=DistanceToEnd;
 
+% Get the default proportions
 default_proportions=EstimationParameters.default_proportions;
 
-if(handles.ArterialFieldData.Value==1)
+%Get the data provider
+dp_sensor=sensor_count_provider; % Sensor data
+dp_midlink=midlink_count_provider; % Midlink count data
+dp_turningCount=turning_count_provider; % Field observed turning count data
+
+inputFolderLocation=findFolder.temp_aimsun_whole(); % This folder stores the simulated data from Aimsun
+dp_simVehicle=simVehicle_data_provider(inputFolderLocation); % Get the simulated vehicle data provider
+
+dp_beats=simBEATS_data_provider; % Beats data provider
+
+dp_signal_sim=simSignal_data_provider; % Simulation signal data provider (currently not used)
+dp_signal_field=fieldSignal_data_provider(inputFolder); % Field signal data provider 
+type=struct(...
+    'ControlPlanSource',        'FromAimsun',...
+    'LastCycleInformation',     'None');
+dp_signal_field.timeStamp=from;
+dp_signal_field.day=DayConfig;
+dp_signal_field.source=type.ControlPlanSource;
+dp_signal_field.LastCycleInformation=type.LastCycleInformation;
+[dp_signal_field.activeControlPlans]=dp_signal_field...
+    .get_active_control_plans_for_given_day_and_time(DayConfig,from,type.ControlPlanSource);
+
+outputFolder=findFolder.estStateQueue_data; % Output folder for estimation results
+disp('Finish loading the data providers!')
+
+
+if(handles.ArterialFieldData.Value==1) % If arterial estimation is enabled!
     
     disp('*******************************************************')
-    disp('******Arterial links!**********************************')
+    disp('******Estimation For Arterial links!*******************')
     disp('*******************************************************')
-    % Generate the configuration of approaches for traffic state estimation
-    appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
     
     %% Run state estimation
-    %Get the data provider
-    ptr_sensor=sensor_count_provider;
-    ptr_midlink=midlink_count_provider;
-    ptr_turningCount=turning_count_provider;
     
+    % Generate the configuration of approaches for traffic state estimation
+    appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
+       
     % Run state estimation
-    est=state_estimation(appDataForEstimation,ptr_sensor,ptr_midlink,ptr_turningCount);
+    est=state_estimation(appDataForEstimation,dp_sensor,dp_midlink,dp_turningCount,dp_simVehicle,...
+        dp_signal_sim, dp_signal_field);
     
     % Overwrite the default parameters using the ones from the GUI inputs
     est.default_params=default_params;
     est.default_proportions=default_proportions;
     
-    appStateEst=[];
-    folderLocation=findFolder.estStateQueue_data();
+    ApproachStateEstimation=[];
     fileName='AimsunQueueEstimated.csv';
     for i=1:size(appDataForEstimation,1) % Loop for all approaches
+        fprintf('Intersection: %d && Road: %s && Direction (section): %s \n', appDataForEstimation(i).intersection_id,...
+            appDataForEstimation(i).road_name,appDataForEstimation(i).direction);
         tmp_approach=appDataForEstimation(i);
-        [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
+%         [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
+        [tmp_approach.turning_count_properties.proportions]=...
+            est.update_vehicle_proportions_with_multiple_data_sources(tmp_approach,queryMeasures);
         [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
         [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
-        appStateEst=[appStateEst;tmp_approach];
+        ApproachStateEstimation=[ApproachStateEstimation;tmp_approach];
     end
-    sheetName=DayConfig;
-    ArterialEstimationTable=est.extract_to_csv(appStateEst,folderLocation,fileName);
-    save(fullfile(inputFolder,sprintf('appStateEst_%s.mat',DayConfig)),'appStateEst');
+    ArterialEstimationTable=est.extract_to_csv(appStateEst,outputFolder,fileName);
+    save(fullfile(inputFolder,sprintf('ApproachStateEstimation_%s.mat',DayConfig)),'ApproachStateEstimation');
     save(fullfile(inputFolder,'ArterialEstimationTable.mat'),'ArterialEstimationTable');
     
     disp('*******************************************************')
@@ -537,11 +575,10 @@ end
 
 if(handles.FreewayBeats.Value==1)
     disp('*******************************************************')
-    disp('******Freeway links!***********************************')
+    disp('******Estimation For Freeway links!********************')
     disp('*******************************************************')
     %% Load the network information file
     % Aimsun
-    inputFolder=findFolder.GUI_temp();
     fileName=fullfile(inputFolder,'BeatsNetwork.mat');
     if(exist(fileName,'file'))
         load(fileName); % Variable: BeatsNetwork
@@ -551,33 +588,30 @@ if(handles.FreewayBeats.Value==1)
         error('Please load and reconstruct the BEATS network first!')
     end
     
-    %% Estimation
-    % Beats data provider
-    ptr_beats=simBEATS_data_provider;
-    
+    %% Estimation    
     EstimationResultsBeats=[];
     AimsunWithBEATSMapping=data.AimsunWithBEATSMapping;
-    for i=1:size(AimsunWithBEATSMapping,1)
+    for i=1:size(AimsunWithBEATSMapping,1) % Loop for each Aimsun link        
         AimsunLinkID=AimsunWithBEATSMapping(i).AimsunLinkID;
-        BeatsLinks=AimsunWithBEATSMapping(i).BEATSLinks;
-        BeatsLinkIDs=[BeatsLinks.SimLinkID]';
+        BeatsLinks=AimsunWithBEATSMapping(i).BEATSLinks; % In each Aimsun link, there can be several BEATS links
+        BeatsLinkIDs=[BeatsLinks.SimLinkID]'; % This is the simulation IDs for BEATS links
+        % Note: Aimsun ID <--Mapping--> BEATS Link ID <--Mapping--> BEAT Link ID In Simulation
         
         % Obtain the simulated BEATS data
         beatsLinkData=initialization_in_aimsun_with_beats.get_estimates_from_beats_simulation...
-            (BeatsLinkIDs,ptr_beats,queryMeasures);
+            (BeatsLinkIDs,dp_beats,queryMeasures);
         AimsunWithBEATSMapping(i).BEATSLinkData=beatsLinkData;
         
-        for j=1:size(beatsLinkData,1)
+        for j=1:size(beatsLinkData,1) % Loop for each BEATS Link
+            fprintf('Aimsun Link ID:%d && BEATS Link ID: %d\n', AimsunLinkID, BeatsLinkIDs(j))
             [avgDensityBeats,avgDensityStdDevBeats,avgSpeedBeats,avgSpeedStdDevBeats]=...
                 initialization_in_aimsun_with_beats.get_averages(beatsLinkData(j));
             EstimationResultsBeats=[EstimationResultsBeats;...
                 [AimsunLinkID,BeatsLinkIDs(j),from,avgDensityBeats,avgDensityStdDevBeats,avgSpeedBeats,avgSpeedStdDevBeats]];
         end
-    end
-    
-    outputFolder=findFolder.estStateQueue_data;
-    dlmwrite(fullfile(outputFolder,'EstimationResultsBeats.csv'), EstimationResultsBeats, 'delimiter', ',', 'precision', 9);
-    
+    end      
+    dlmwrite(fullfile(outputFolder,'EstimationResultsBeats.csv'), ...
+        EstimationResultsBeats, 'delimiter', ',', 'precision', 9);
     save(fullfile(inputFolder,sprintf('AimsunWithBEATSMapping_%s.mat',DayConfig)),'AimsunWithBEATSMapping');
     save(fullfile(inputFolder,'FreewayEstimationTable.mat'),'EstimationResultsBeats');
     disp('*******************************************************')
