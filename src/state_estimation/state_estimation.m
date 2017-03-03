@@ -259,37 +259,68 @@ classdef state_estimation
         function [sensorCountProperty]=get_sensor_count_for_approach(this,approach_in,queryMeasures)
             %% This function is used to get the turning information from sensor counts
             
+            validStatus=[0,0,0];              
             if(isempty(approach_in.advanced_detectors) ||(isempty(approach_in.exclusive_left_turn) &&...
-                    isempty(approach_in.exclusive_right_turn) && isempty(approach_in.general_stopbar_detectors)))
+                    isempty(approach_in.exclusive_right_turn) && isempty(approach_in.general_stopline_detectors)))
                 % We need to have a full map of advanced detectors
                 % We also need the set of stopbar detectors not empty!
-                sensorCountProperty.data=[];
+                sensorCountProperty.validStatus=validStatus;
                 sensorCountProperty.avgProportion=[];
             else
                 % Get link properties
                 numberOfLanes=approach_in.link_properties.NumberOfLanes;
                 
                 % Get advanced detectors' data
-                [totalCountAdvanced, ~,effectiveTotalLanesAdvanced]=get_total_count_by_movement...
-                (this,approach_in,queryMeasures,'Advanced');
+                [totalCountAdvanced, ~,effectiveTotalLanesAdvanced]=this.get_total_count_by_movement(approach_in,queryMeasures,'Advanced');
                 if(effectiveTotalLanesAdvanced==0) % No data or bad data
-                    sensorCountProperty.data=[];
+                    sensorCountProperty.validStatus=validStatus;
                     sensorCountProperty.avgProportion=[];
                     return;
                 else % Rescale the data                    
-                    totalCountAdvanced=totalCountAdvanced*numberOfLanes/effectiveTotalLanes;
+                    totalCountAdvanced=totalCountAdvanced*numberOfLanes/effectiveTotalLanesAdvanced;
                 end
                 
                 % Get exclusive left turn data                
-                [totalCountLeft, ~,~]=get_total_count_by_movement(approach_in,queryMeasures,'Exclusive Left');
+                [totalCountLeft, ~,~]=this.get_total_count_by_movement(approach_in,queryMeasures,'Exclusive Left');
                 
                 % Get exclusive right turn data                
-                [totalCountRight, ~,~]=get_total_count_by_movement(approach_in,queryMeasures,'Excluive Right');
+                [totalCountRight, ~,~]=this.get_total_count_by_movement(approach_in,queryMeasures,'Exclusive Right');
                 
                 % Get general stopbar data                
-                [totalCountGeneral, totalCountByMovement,~]=get_total_count_by_movement(approach_in,queryMeasures,'General Stopbar');
+                [~, totalCountByMovement,~]=this.get_total_count_by_movement(approach_in,queryMeasures,'General Stopbar');
+           
+                % Update the proportion for left turn
+                if(totalCountLeft~=0)
+                    totalCountLeft=totalCountLeft+totalCountByMovement(1);
+                    validStatus(1)=1;
+                    avgProportionLeft=min(1,totalCountLeft/totalCountAdvanced);
+                else
+                    avgProportionLeft=nan;
+                end
                 
+                % Update the proportion for right turn
+                if(totalCountRight~=0)
+                    totalCountRight=totalCountRight+totalCountByMovement(3);
+                    validStatus(3)=1;
+                    avgProportionRight=min(1,totalCountRight/totalCountAdvanced);
+                else
+                    avgProportionRight=nan;
+                end
                 
+                % Update the proportion for through movement
+                if(validStatus(1)==1 && validStatus(3)==1) 
+                    if(avgProportionLeft+avgProportionRight>1)
+                        avgProportionThrough=nan;
+                    else % If it is valid
+                        avgProportionThrough=1-avgProportionLeft-avgProportionRight;
+                        validStatus(2)=1;
+                    end   
+                else
+                    avgProportionThrough=nan;
+                end
+                
+                sensorCountProperty.validStatus=validStatus;
+                sensorCountProperty.avgProportion=[avgProportionLeft,avgProportionThrough,avgProportionRight];
             end
             
         end
@@ -319,15 +350,14 @@ classdef state_estimation
             % Loop for each movement
             for i=1:size(detectors,1)  % There may be different types of detectors
                 totalLanes=totalLanes+sum(detectors(i).NumberOfLanes);
-                [tmpTotalCount, tmpEffectiveTotalLanes, tmpTotalCountByMovement]=get_total_count_by_detector_type...
-                    (detectors(i,:),queryMeasures,movement);
+                [tmpTotalCount, tmpEffectiveTotalLanes, tmpTotalCountByMovement]=this.get_total_count_by_detector_type(detectors(i,:),queryMeasures,movement);
                 totalCount=totalCount+tmpTotalCount;
                 totalCountByMovement=totalCountByMovement+tmpTotalCountByMovement;
                 effectiveTotalLanes=effectiveTotalLanes+tmpEffectiveTotalLanes;
             end
             if(effectiveTotalLanes~=0)
-                totalCount=totalCount*totalLanesLeft/effectiveTotalLanesLeft;
-                totalCountByMovement=totalCountByMovement*totalLanesLeft/effectiveTotalLanesLeft;
+                totalCount=totalCount*totalLanes/effectiveTotalLanes;
+                totalCountByMovement=totalCountByMovement*totalLanes/effectiveTotalLanes;
             end
 
         end
@@ -351,7 +381,7 @@ classdef state_estimation
                         totalCount=totalCount+countByDetector;
                         effectiveTotalLanes=effectiveTotalLanes+detectors.NumberOfLanes(i);
                         
-                        if(type=='General Stopbar') % If it is general stopbar detectors
+                        if(strcmp(type,{'General Stopbar'})) % If it is general stopbar detectors
                             detectorMovement=detector.Movement;     % Check the movements  
                             % Get the proportions
                             [proportionLeft]=state_estimation.find_traffic_proportion...

@@ -468,7 +468,7 @@ end
 if(exist(fullfile(inputFolder,'InitializationParameters.mat'),'file')) % Loading initialization parameters
     load(fullfile(inputFolder,'InitializationParameters.mat'));
     % Need to use this to define the turning
-    DistanceToEnd=str2double(InitializationParameters.DistanceToEndTurning); 
+    DistanceToEnd=str2double(InitializationParameters.DistanceToEndTurning);
 else
     DistanceToEnd=60;
 end
@@ -517,7 +517,7 @@ dp_simVehicle=simVehicle_data_provider(inputFolderLocation); % Get the simulated
 dp_beats=simBEATS_data_provider; % Beats data provider
 
 dp_signal_sim=simSignal_data_provider; % Simulation signal data provider (currently not used)
-dp_signal_field=fieldSignal_data_provider(inputFolder); % Field signal data provider 
+dp_signal_field=fieldSignal_data_provider(inputFolder); % Field signal data provider
 type=struct(...
     'ControlPlanSource',        'FromAimsun',...
     'LastCycleInformation',     'None');
@@ -542,7 +542,7 @@ if(handles.ArterialFieldData.Value==1) % If arterial estimation is enabled!
     
     % Generate the configuration of approaches for traffic state estimation
     appDataForEstimation=recAimsunNet.get_approach_config_for_estimation(recAimsunNet.networkData);
-       
+    
     % Run state estimation
     est=state_estimation(appDataForEstimation,dp_sensor,dp_midlink,dp_turningCount,dp_simVehicle,...
         dp_signal_sim, dp_signal_field);
@@ -557,7 +557,7 @@ if(handles.ArterialFieldData.Value==1) % If arterial estimation is enabled!
         fprintf('Intersection: %d && Road: %s && Direction (section): %s \n', appDataForEstimation(i).intersection_id,...
             appDataForEstimation(i).road_name,appDataForEstimation(i).direction);
         tmp_approach=appDataForEstimation(i);
-%         [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
+        %         [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
         [tmp_approach.turning_count_properties.proportions]=...
             est.update_vehicle_proportions_with_multiple_data_sources(tmp_approach,queryMeasures);
         [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
@@ -588,10 +588,10 @@ if(handles.FreewayBeats.Value==1)
         error('Please load and reconstruct the BEATS network first!')
     end
     
-    %% Estimation    
+    %% Estimation
     EstimationResultsBeats=[];
     AimsunWithBEATSMapping=data.AimsunWithBEATSMapping;
-    for i=1:size(AimsunWithBEATSMapping,1) % Loop for each Aimsun link        
+    for i=1:size(AimsunWithBEATSMapping,1) % Loop for each Aimsun link
         AimsunLinkID=AimsunWithBEATSMapping(i).AimsunLinkID;
         BeatsLinks=AimsunWithBEATSMapping(i).BEATSLinks; % In each Aimsun link, there can be several BEATS links
         BeatsLinkIDs=[BeatsLinks.SimLinkID]'; % This is the simulation IDs for BEATS links
@@ -609,7 +609,7 @@ if(handles.FreewayBeats.Value==1)
             EstimationResultsBeats=[EstimationResultsBeats;...
                 [AimsunLinkID,BeatsLinkIDs(j),from,avgDensityBeats,avgDensityStdDevBeats,avgSpeedBeats,avgSpeedStdDevBeats]];
         end
-    end      
+    end
     dlmwrite(fullfile(outputFolder,'EstimationResultsBeats.csv'), ...
         EstimationResultsBeats, 'delimiter', ',', 'precision', 9);
     save(fullfile(inputFolder,sprintf('AimsunWithBEATSMapping_%s.mat',DayConfig)),'AimsunWithBEATSMapping');
@@ -831,7 +831,7 @@ if(handles.InitializationVehicle.Value==1)
     VehicleListTable=[];
     % By default: VehicleFromSimulation==1
     if(handles.VehicleFromField.Value==0 && handles.VehicleFromBEATS.Value==0)
-        % Only use aimsun simulation        
+        % Only use aimsun simulation
         for i=1:size(recAimsunNet.networkData,1) % Loop for each approach
             junctionSectionInf=recAimsunNet.networkData(i);
             [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
@@ -858,7 +858,7 @@ if(handles.InitializationVehicle.Value==1)
             [idx,address]=ismember(sections,sectionsAimsunInBeats);
             [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
                 (junctionSectionInf,dp_vehicle,querySetting,currentTime);
-
+            
             for j=1:size(statisticsSection,1)
                 if(idx(j)==0)
                     [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
@@ -874,7 +874,7 @@ if(handles.InitializationVehicle.Value==1)
                 end
                 VehicleListTable=[VehicleListTable;tmpVehicleList];
             end
-        end        
+        end
     else
         % If use BEATS, Field data, and Aimsun results
         % Get the BEATS network
@@ -897,7 +897,7 @@ if(handles.InitializationVehicle.Value==1)
             [idx,address]=ismember(sections,sectionsAimsunInBeats);
             [statisticsSection]=dp_initialization.get_vehicle_statistics_from_simulation...
                 (junctionSectionInf,dp_vehicle,querySetting,currentTime);
-
+            
             for j=1:size(statisticsSection,1)
                 if(idx(j)==0)
                     [tmpVehicleList]=dp_initialization.generate_vehicle_without_fieldEstimation...
@@ -913,7 +913,7 @@ if(handles.InitializationVehicle.Value==1)
                 end
                 VehicleListTable=[VehicleListTable;tmpVehicleList];
             end
-        end        
+        end
     end
     
     save(fullfile(inputFolder,'VehicleListTable.mat'),'VehicleListTable'); % Saved for View
