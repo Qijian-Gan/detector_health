@@ -201,6 +201,7 @@ classdef reconstruct_aimsun_network
         function [appForEstimation]=get_approach_config_for_estimation(networkData)
             %% This function is used to get the approach information for estimation (signalized)
             
+
             appForEstimation=[];
             for i=1:size(networkData,1) % Loop for each approach
                 if(networkData(i).Signalized) % If it is signalized
@@ -260,6 +261,9 @@ classdef reconstruct_aimsun_network
                     
                     % Turning count properties to be empty (at the initialization step)
                     tmpAppForEstimation.turning_count_properties=[];
+                    
+                    % Get the turning information
+                    tmpAppForEstimation.turningInf=networkData(i).TurningBelongToApproach;
                     
                     appForEstimation=[appForEstimation;tmpAppForEstimation];
                 end

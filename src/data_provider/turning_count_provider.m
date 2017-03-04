@@ -72,8 +72,8 @@ classdef turning_count_provider
                         data_out.volume=data(idx,3:end);
                     end
                 end
-            else
-                fprintf('No such a data file:%s\n',fileName);
+%             else
+%                 fprintf('No such a data file:%s\n',fileName);
             end
         end
         
@@ -87,8 +87,8 @@ classdef turning_count_provider
             if(exist(dataFile,'file'))
                 load(dataFile); % Inside: dataAll                
                 [data_out]=turning_count_provider.cluster_data_by_query_measures(dataAll,queryMeasures);
-            else
-                fprintf('No such a data file:%s\n',fileName);
+%             else
+%                 fprintf('No such a data file:%s\n',fileName);
             end  
         end
         

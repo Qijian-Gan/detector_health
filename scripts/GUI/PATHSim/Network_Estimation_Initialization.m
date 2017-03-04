@@ -560,11 +560,12 @@ if(handles.ArterialFieldData.Value==1) % If arterial estimation is enabled!
         %         [tmp_approach.turning_count_properties.proportions]=est.update_vehicle_proportions(tmp_approach,queryMeasures);
         [tmp_approach.turning_count_properties.proportions]=...
             est.update_vehicle_proportions_with_multiple_data_sources(tmp_approach,queryMeasures);
+
         [tmp_approach]=est.get_sensor_data_for_approach(tmp_approach,queryMeasures);
         [tmp_approach.decision_making]=est.get_traffic_condition_by_approach(tmp_approach,queryMeasures);
         ApproachStateEstimation=[ApproachStateEstimation;tmp_approach];
     end
-    ArterialEstimationTable=est.extract_to_csv(appStateEst,outputFolder,fileName);
+    ArterialEstimationTable=est.extract_to_csv(ApproachStateEstimation,outputFolder,fileName);
     save(fullfile(inputFolder,sprintf('ApproachStateEstimation_%s.mat',DayConfig)),'ApproachStateEstimation');
     save(fullfile(inputFolder,'ArterialEstimationTable.mat'),'ArterialEstimationTable');
     
