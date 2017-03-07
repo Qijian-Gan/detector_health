@@ -1,0 +1,647 @@
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport"
+	content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="">
+<meta name="author" content="">
+<title>Arterial Performance Measurement Systems</title>
+
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet"
+	href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/css/bootstrap-datetimepicker.min.css" />
+
+<link rel="stylesheet"
+	href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+
+</head>
+
+<body onload="hide_sb2()">
+	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="navbar-header">
+			<div class="navbar-icon-container">
+				<a href="#" class="navbar-icon pull-right visible-xs" id="nav-btn"><i
+					class="fa fa-bars fa-lg white"></i></a> <a href="#"
+					class="navbar-icon pull-right visible-xs" id="sidebar-toggle-btn"><i
+					class="fa fa-search fa-lg white"></i></a>
+			</div>
+			<a class="navbar-brand" href="#">Arterial Performance Measurement
+				Systems: Connected Corridors</a>
+		</div>
+		<div class="navbar-collapse collapse">
+			<ul class="nav navbar-nav">
+				<li class="dropdown"><a class="dropdown-toggle"
+					id="city-list-href" href="#" role="button" data-toggle="dropdown"><i
+						class="fa fa-list white"></i>&nbsp;&nbsp;City<b class="caret"></b></a>
+					<ul class="dropdown-menu" id="city-list" onClick="relarge()">
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in"><i
+								class='glyphicon glyphicon-ok'></i>&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Arcadia, CA </a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Alhambra, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Burbank, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Diamond Bar, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Gardena, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Glendale, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Inglewood, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Long Beach, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Pasadena, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Pomona, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Santa Clarita, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>Santa Monica, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>West Covina, CA
+						</a></li>
+						<li><a href="#" data-toggle="collapse"
+							data-target=".navbar-collapse.in">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i
+								class="glyphicon glyphicon-map-marker"></i>West Hollywood, CA
+						</a></li>
+					</ul></li>
+				<li class="dropdown"><a class="dropdown-toggle"
+					id="application-list-href" href="#" role="button"
+					data-toggle="dropdown"><i class="fa fa-list white"></i>&nbsp;&nbsp;Application<b
+						class="caret"></b></a>
+					<ul class="dropdown-menu do-realtime-render" id="application-list">
+						<li><a href='#' data-toggle='collapse'
+							data-target='.navbar-collapse.in'> <i
+								class='glyphicon glyphicon-ok'></i>&nbsp;&nbsp;&nbsp; <i
+								class='glyphicon glyphicon-eye-open'></i> &nbsp;Detctor
+								Inventory
+						</a></li>
+						<li><a href='#' data-toggle='collapse'
+							data-target='.navbar-collapse.in'>
+								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <i
+								class='glyphicon glyphicon-eye-open'></i> &nbsp;Detector Health
+								Analysis
+						</a></li>
+						<li><a href='#' data-toggle='collapse'
+							data-target='.navbar-collapse.in'>
+								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <i
+								class='glyphicon glyphicon-eye-open'></i> &nbsp;Performance
+								Analysis
+						</a></li>
+					</ul></li>
+			</ul>
+		</div>
+	</div>
+
+	<div id="container">
+		<div id="sidebar">
+			<div>
+				<div class="text-center" id="panel-corridor-name"></div>
+			</div>
+			<div class="sidebar-wrapper" style="overflow: auto;">
+				<div class="panel panel-default" id="features">
+					<div class="panel-body" style="padding: 0;">
+						<ul class="nav nav-tabs" id="station-section-tabs" role="tablist"
+							style="font-size: 10pt; font-weight: bold;">
+							<li role="presentation" style="font-size: 10pt;"
+								id="section-tab-select"><a href="#section-table-tab"
+								role="tab" data-toggle="tab">Sections</a></li>
+							<li role="presentation" class="active"
+								style="font-size: 10pt; font-weight: bold;"
+								id="station-tab-select"><a href="#station-table" role="tab"
+								data-toggle="tab">Stations</a></li>
+						</ul>
+
+						<div role="tabpanel">
+							<div class="tab-content">
+								<div role="tabpanel" class="tab-pane" id="section-table-tab">
+									<div class="sidebar-table">
+										<table class="table table-hov er do-realtime-render"
+											id="sections-list" onClick="relocate()">
+											<thead class="hidden">
+												<tr>
+													<th>Icon</th>
+												<tr>
+												<tr>
+													<th>Name</th>
+												<tr>
+											</thead>
+											<tbody class="list"></tbody>
+										</table>
+									</div>
+								</div>
+
+								<div role="tabpanel" class="tab-pane active" id="station-table">
+									<div class="sidebar-table">
+										<table class="table table-hov er do-realtime-render"
+											id="feature-list" onClick="relocate()">
+											<thead class="hidden">
+												<tr>
+													<th>Icon</th>
+												<tr>
+												<tr>
+													<th>Name</th>
+												<tr>
+											</thead>
+											<tbody class="list"></tbody>
+										</table>
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="map"></div>
+
+		<div id="sidebar2">
+			<div class="modal-header">
+				<h4 class="modal-title text-primary" id="feature-title"></h4>
+			</div>
+			<div class="modal-body modal-lg" id="feature-info">
+				<ul class="nav nav-tabs" role="tablist" id="station-tabs">
+					<li role="presentation" class="active"><a
+						href="#realtime-station-tab" role="tab" data-toggle="tab"
+						id="rt-tab" style="font-weight: bold"> <i
+							class="glyphicon glyphicon-refresh"></i>&nbsp;Real-Time
+					</a></li>
+					<li role="presentation"><a href="#station-historical"
+						role="tab" data-toggle="tab" id="hs-tab" style="font-weight: bold">
+							<i class="glyphicon glyphicon-time"></i>&nbsp;Historical
+					</a></li>
+				</ul>
+
+				<div class="tab-content">
+					<div class="tab-pane fade active in" id="realtime-station-tab">
+						<div class="panel panel-primary" id="table_panel">
+							<div class="container-fluid">
+								<div class="row">
+									<div class='col-md-3'>
+										<label>Scheme:</label>
+										<div>
+											<select class="form-control do-realtime-render"
+												id="realtime-vehclassscheme-selector">
+											</select>
+										</div>
+									</div>
+									<div class='col-md-3' style="width: 150px">
+										<label>Measurement:</label>
+										<div>
+											<select class="form-control do-realtime-render"
+												id="metrics-selector">
+											</select>
+										</div>
+									</div>
+									<div class='col-md-3  realtime-lane-group'>
+										<label>Lane/Start Hr:</label>
+										<div>
+											<select class="form-control" id="lanes-selector">
+											</select>
+										</div>
+									</div>
+									<div class='col-md-3  realtime-class-group'
+										style="width: 160px">
+										<label>Vehicle Class:</label>
+										<div>
+											<select class="form-control" id="class-selector">
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="row">
+									<!-- also add the interval selection for real-time measurement-->
+
+									<div class="col-xs-1" style="width: 105px; padding-top: 5px;">
+										<label>Visualization:</label>
+									</div>
+									<div class="col-xs-4" style="margin-left: 10px;">
+										<input type="radio" name="realtime-select" value="line"
+											id="realtime-line-radio" checked> <label
+											for="realtime-line-radio">Line Chart</label>
+									</div>
+									<div class="col-xs-4" style="margin-left: 5px;">
+										<input type="radio" name="realtime-select" value="bar"
+											class="do-realtime-render" id="realtime-bar-radio"> <label
+											for="realtime-bar-radio">Bar Chart</label>
+									</div>
+									<div class="col-xs-4">
+										<input type="radio" name="realtime-select" value="pie"
+											class="do-realtime-render" id="realtime-pie-radio"> <label
+											for="realtime-pie-radio">Pie Chart</label>
+									</div>
+									<div class="col-xs-4" style="width: 65px;">
+										<input type="radio" name="realtime-select" value="table"
+											class="do-realtime-render" id="realtime-table-radio">
+										<label for="realtime-table-radio">Table</label>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-xs-1">
+										<label>Interval:</label>
+									</div>
+									
+									<div class="col-xs-2" style="margin-left: 37px;">
+										<input type="radio" name="interval-rt" value="5min"
+											class="do-realtime-render" id="5min-radio" checked>&nbsp;5
+										min
+									</div>
+									<div class="col-xs-2">
+										<input type="radio" name="interval-rt" value="15min"
+											class="do-realtime-render" id="15min-radio">&nbsp;15
+										min
+									</div>
+									<div class="col-xs-2">
+										<input type="radio" name="interval-rt" value="1hour"
+											class="do-realtime-render" id="1hour-radio">&nbsp;1
+										hour
+									</div>
+									<div class="col-xs-2 realtime-1day-radio">
+										<input type="radio" name="interval-rt" value="1day"
+											class="do-realtime-render" id="1day-radio">&nbsp;1
+										day
+									</div>
+								</div>
+								<div class="row">
+									<div class="panel panel-primary" style="margin-left: 11px;">
+										<label class="timestamp"></label>
+									</div>
+									<div class="panel panel-primary" style="margin-left: 11px;"
+										id="speed-est-clr">
+										<label>Speed estimation in testing phase, may not be
+											100% accurate.</label>
+									</div>
+								</div>
+								<div class="row" id="realtime-chart-title"></div>
+								<div class="row">
+									<table class="table realtime-table-group" id="realtime-table">
+									</table>
+									<div id="realtime-chart" class="realtime-chart-group"></div>
+									<div id="realtime-chart2" class="realtime-chart-group2"></div>
+									<div class="row" id="pie-chart-label">
+										<label id="hover"></label>
+									</div>
+								</div>
+								<div class="row">
+									<div id="chartLegend-realtime"></div>
+									<div class='col-md-2'>
+										<div>
+											<button type="button"
+												class="btn btn-primary btn-sm btn-block"
+												id="realtime-download-button" style="display: none;">
+												<span class="glyphicon glyphicon-download"
+													aria-hidden="true">&nbsp Download</span>
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="tab-pane fade" id="station-historical">
+						<div class="container-fluid" , id="station-plot-selectors">
+							<div class="row">
+								<div class='col-md-3' style="width: 260px;">
+									<label>Start Date:</label>
+									<div class='input-group date do-plot' id='datetimepicker1'>
+										<input type='text' class="form-control do-plot"
+											id="start-date-time" /> <span class="input-group-addon"><span
+											class="glyphicon glyphicon-calendar"></span> </span>
+									</div>
+								</div>
+
+								<div class='col-md-3' style="width: 260px;">
+									<label>End Date:</label>
+									<div class='input-group date do-plot' id='datetimepicker2'>
+										<input type='text' class="form-control do-plot"
+											id="end-date-time" /> <span class="input-group-addon"><span
+											class="glyphicon glyphicon-calendar"></span> </span>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class='col-md-3 modal-sm' style="width: 110px;">
+									<label>Scheme:</label>
+									<div>
+										<select class="form-control" id="historical-vehscheme-select">
+										</select>
+									</div>
+
+								</div>
+								<div class='col-md-3 modal-sm' style="width: 149px;">
+
+									<label id="historical-vehclass-select-label">Vehicle
+										Class:</label>
+									<div>
+										<select class="form-control do-plot"
+											id="historical-vehclass-select">
+										</select>
+									</div>
+
+								</div>
+								
+								<div class='col-md-3 modal-sm' style="width: 110px;">
+
+									<label>Measurement:</label>
+									<div>
+										<select class="form-control do-plot"
+											id="historical-measure-select-one">
+										</select>
+									</div>
+
+								</div>
+								<div class='col-md-3 modal-sm' style="width: 149px;">
+
+									<label>Relation:</label>
+									<div>
+										<select class="form-control do-plot"
+											id="historical-measure-select-two">
+										</select>
+									</div>
+
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-xs-1" style="width: 105px; padding-top: 5px;">
+									<label>Visualization:</label>
+								</div>
+								<div class="col-xs-4" style="margin-left: 10px;">
+									<input type="radio" name="historical-select" value="line"
+										class="do-plot" id="historical-line-radio" checked> <label
+										for="historical-line-radio">Line Chart</label>
+								</div>
+								
+							</div>
+							<div class="row">
+								<div class="col-xs-1">
+									<label>Interval:</label>
+								</div>
+								
+								<div class="col-xs-2" style="margin-left: 37px;">
+									<input type="radio" name="interval" value="5min"
+										class="do-plot" checked>&nbsp;5 min
+								</div>
+								<div class="col-xs-2">
+									<input type="radio" name="interval" value="15min"
+										class="do-plot">&nbsp;15 min
+								</div>
+								<div class="col-xs-2">
+									<input type="radio" name="interval" value="1hour"
+										class="do-plot">&nbsp;1 hr
+								</div>
+								
+							</div>
+							<div class="row">
+								<div class="col-xs-1">
+									<label>Days:</label>
+								</div>
+								<div class="col-xs-2" id="Mo" style="margin-left: 35px;">
+									<div class="input-group">
+										<input type="checkbox" id="MonCheckBox" class="do-plot"
+											checked>Mo<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="Tu">
+									<div class="input-group">
+										<input type="checkbox" id="TueCheckBox" class="do-plot"
+											checked>Tu<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="We">
+									<div class="input-group">
+										<input type="checkbox" id="WedCheckBox" class="do-plot"
+											checked>We<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="Th">
+									<div class="input-group">
+										<input type="checkbox" id="ThuCheckBox" class="do-plot"
+											checked>Th<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="Fr">
+									<div class="input-group">
+										<input type="checkbox" id="FriCheckBox" class="do-plot"
+											checked>Fr<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="Sa">
+									<div class="input-group">
+										<input type="checkbox" id="SatCheckBox" class="do-plot"
+											checked>Sa<br>
+									</div>
+								</div>
+								<div class="col-xs-2" id="Su">
+									<div class="input-group">
+										<input type="checkbox" id="SunCheckBox" class="do-plot"
+											checked>Su<br>
+									</div>
+								</div>
+							</div>
+
+							<div class="row" id="lanes-check-box">&nbsp</div>
+							<div class="row" id="pollutant-check-box"></div>
+							<div class="row">
+								<div class='col-md-2'>
+									<!--<label>&nbsp</label>-->
+									<div>
+										<button type="button" class="btn btn-primary btn-sm btn-block"
+											id="plot-button">
+											<span class="glyphicon glyphicon-stats" aria-hidden="true">&nbspPlot</span>
+										</button>
+									</div>
+								</div>
+								<div class="col-sm-4">
+									<p class="text-center hidden" id="press-plot-btn">Please
+										Press Plot Button</p>
+								</div>
+
+							</div>
+							
+						</div>
+						<div class="row">
+							<div id="loading-modal" class="progress col-md-3"
+								style="left: 50%;">
+								<div class="progress-bar progress-bar-striped active"
+									role="progressbar" aria-valuenow="100" aria-valuemin="0"
+									aria-valuemax="100" style="width: 100%"></div>
+							</div>
+							<div id="station-plot" style="margin-left: 20px;"></div>
+						</div>
+						<div class="row">
+							<table class="table historical-table-group" id="historical-table">
+							</table>
+						</div>
+						<div class="row">
+							<div id="chartLegend"></div>
+							<div class='col-md-2'>
+								<!--<label>&nbsp</label>-->
+								<div>
+									<button type="button" class="btn btn-primary btn-sm btn-block"
+										id="download-button" style="display: none;">
+										<span class="glyphicon glyphicon-download" aria-hidden="true">&nbspDownload</span>
+									</button>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-md-3">&nbsp&nbsp&nbsp&nbsp</div>
+							<div class="col-md-3" id="no-data-notification"></div>
+							<div class="col-md-3">&nbsp&nbsp&nbsp&nbsp</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	</div>
+
+
+	<div class="modal fade" id="legendModal" tabindex="-1" role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal"
+						aria-hidden="true">&times;</button>
+					<h4 class="modal-title">Map Legend</h4>
+				</div>
+				<div class="modal-body">
+					<p>Map Legend goes here...</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+			<!-- /.modal-content -->
+		</div>
+		<!-- /.modal-dialog -->
+	</div>
+	<!-- /.modal -->
+
+	<div class="modal fade" id="attributionModal" tabindex="-1"
+		role="dialog">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal"
+						aria-hidden="true">&times;</button>
+					<h4 class="modal-title">
+						Developed by <a href='http://bryanmcbride.com'>bryanmcbride.com</a>
+					</h4>
+				</div>
+				<div class="modal-body">
+					<div id="attribution"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script
+		src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script src="http://code.highcharts.com/highcharts.js"></script>
+	<script
+		src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.11.1/typeahead.bundle.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.6/handlebars.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js"></script>
+	<script
+		src="https://www.mapquestapi.com/sdk/leaflet/v2.2/mq-map.js?key=IKPLqCyv7OwcOqYF5ViSPjaXPRmcHL3Z"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.0.3/leaflet.markercluster.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.60.0/L.Control.Locate.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.resize.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.pie.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.stack.min.js"></script>
+	<script
+		src="leaflet-groupedlayercontrol/src/leaflet.groupedlayercontrol.js"></script>
+	<script src="flot-axislabels/jquery.flot.axislabels.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/js/bootstrap-datetimepicker.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/jquery.transit/0.9.12/jquery.transit.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/sco.js/1.1.0/js/sco.collapse.min.js"></script>
+	<script
+		src="https://cdnjs.cloudflare.com/ajax/libs/mouse0270-bootstrap-notify/3.1.7/bootstrap-notify.min.js"></script>
+
+	<script src="mapLayerHelper.js"></script>
+	<script src="helperFunctions.js"></script>
+	<script src="app.js"></script>
+	<script src="constants.js"></script>
+	<script src="realtimeApplication.js"></script>
+	<script src="plotFunctions.js"></script>
+	<script src="variables.js"></script>
+	<script src="sidebar.js"></script>
+
+	<script type="text/javascript">
+		$(document).ready(function() {
+			$("#loading-notice").fadeOut()
+		});
+		(function(i, s, o, g, r, a, m) {
+			i['GoogleAnalyticsObject'] = r;
+			i[r] = i[r] || function() {
+				(i[r].q = i[r].q || []).push(arguments)
+			}, i[r].l = 1 * new Date();
+			a = s.createElement(o), m = s.getElementsByTagName(o)[0];
+			a.async = 1;
+			a.src = g;
+			m.parentNode.insertBefore(a, m)
+		})(window, document, 'script',
+				'https://www.google-analytics.com/analytics.js', 'ga');
+
+		ga('create', 'UA-78679582-1', 'auto');
+		ga('send', 'pageview');
+	</script>
+	
+</body>
