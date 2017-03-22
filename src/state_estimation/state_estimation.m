@@ -324,19 +324,28 @@ classdef state_estimation
                 if(sum(idx)) % If find the corresponding active control plan
                     currentControlPlan=activeControlPlans(idx,:);
                     
+                    if(size(currentControlPlan,1)>1)
+                        controlType={currentControlPlan.ControlType}';
+                        idx=ismember(controlType,'Unspecified');
+                        currentControlPlan(idx,:)=[];
+                        if(size(currentControlPlan,1)>1)
+                            error('Too many current control plans!')
+                        end
+                    end
+                    
                     signal_properties.CycleLength=currentControlPlan.Cycle;
                     
-                    [maxGreenLeft]=state_estimation.find_green_time_by_movement(approach_in,'Left Turn');
+                    [maxGreenLeft]=state_estimation.find_green_time_by_movement(approach_in,'Left Turn',currentControlPlan);
                     if(maxGreenLeft>0)
                         signal_properties.LeftTurnGreen=maxGreenLeft;
                     end
                     
-                    [maxGreenThrough]=state_estimation.find_green_time_by_movement(approach_in,'Through');
+                    [maxGreenThrough]=state_estimation.find_green_time_by_movement(approach_in,'Through',currentControlPlan);
                     if(maxGreenThrough>0)
                         signal_properties.ThroughGreen=maxGreenThrough;
                     end
                     
-                    [maxGreenRight]=state_estimation.find_green_time_by_movement(approach_in,'Right Turn');
+                    [maxGreenRight]=state_estimation.find_green_time_by_movement(approach_in,'Right Turn',currentControlPlan);
                     if(maxGreenRight>0)
                         signal_properties.RightTurnGreen=maxGreenRight;
                     end
@@ -1663,7 +1672,7 @@ classdef state_estimation
             end
         end
         
-        function [maxGreen]=find_green_time_by_movement(approach_in,type)
+        function [maxGreen]=find_green_time_by_movement(approach_in,type,currentControlPlan)
             
             turningInf=approach_in.turningInf;
             turningIDs=[turningInf.TurningProperty.TurnID]';
