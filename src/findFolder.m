@@ -99,12 +99,8 @@ classdef findFolder
             x = fullfile(findFolder.root,'\data\IEN_feed\organization_inventory');
         end
         
-        function [x] = IEN_detector()
-            x = fullfile(findFolder.root,'\data\IEN_feed\detector_inventory');
-        end
-        
-        function [x] = IEN_detector_data()
-            x = fullfile(findFolder.root,'\data\IEN_feed\detector_data');
+        function [x] = IEN_data()
+            x = fullfile(findFolder.root,'\data\IEN_feed\ienData');
         end
         
         function [x] = IEN_temp()
@@ -130,6 +126,10 @@ classdef findFolder
         function [x] = GUI_aimsun_model()            
             x = fullfile(findFolder.root,'\scripts\aimsun_model\whole_network');
         end
+        
+        function [x] = find_java_class()            
+            x = fullfile(findFolder.root,'src\JavaFunctions\target\classes\');
+        end 
     end
     
 end
