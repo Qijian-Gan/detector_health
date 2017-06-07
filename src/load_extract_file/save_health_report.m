@@ -68,7 +68,9 @@ classdef save_health_report
             % to a matrix
             
             dataOut=[[dataIn.DetectorID]', [dataIn.Year]', [dataIn.Month]', [dataIn.Day]',[dataIn.DateNum]'...
-                [dataIn.MissingRate]',[dataIn.InconsistencyRate]',[dataIn.BreakPoints]',[dataIn.ZeroValues]',[dataIn.Health]'];
+                [dataIn.MissingRate]',[dataIn.ExcessiveRate]',[dataIn.MaxZeroValues]',[dataIn.HighValueRate]',...
+                [dataIn.ConstantOrNot]',[dataIn.InconsisRateWithSpeed]',[dataIn.InconsisRateWithoutSpeed]',...
+                [dataIn.Health]'];
         end
     end
     

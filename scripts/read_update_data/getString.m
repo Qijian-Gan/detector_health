@@ -12,7 +12,7 @@ dp=load_IEN_configuration();
 array=char(arrayByType(1).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalDevInv=13;
 OrgID=arrayString(:,1:intervalDevInv:end)';
@@ -36,7 +36,7 @@ DevInv=dp.dataFormatDevInv(OrgID,DeviceID,LastUpdate,Date,Time,Description,RoadN
 array=char(arrayByType(2).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalDevData=12;
 OrgID=arrayString(:,1:intervalDevData:end)';
@@ -59,7 +59,7 @@ DevData=dp.dataFormatDevData(OrgID,DeviceID,LastUpdate,Date,Time,State,Speed,Occ
 array=char(arrayByType(3).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalIntSigInv=11;
 OrgID=arrayString(:,1:intervalIntSigInv:end)';
@@ -81,7 +81,7 @@ IntSigInv=dp.dataFormatSigInv(OrgID,DeviceID,LastUpdate,Date,Time,SignalType,Des
 array=char(arrayByType(4).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalIntSigData=12;
 OrgID=arrayString(:,1:intervalIntSigData:end)';
@@ -104,7 +104,7 @@ IntSigData=dp.dataFormatSigData(OrgID,DeviceID,LastUpdate,Date,Time,CommState,Si
 array=char(arrayByType(5).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalPlanPhase=6;
 OrgID=arrayString(:,1:intervalPlanPhase:end)';
@@ -120,7 +120,7 @@ PlanPhase=dp.dataFormatPhase(OrgID,DeviceID,LastUpdate,Date,Time,PhaseTime);
 array=char(arrayByType(6).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strsplit(tmpString{1,1},',');
+arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
 
 intervalLastCyclePhase=7;
 OrgID=arrayString(:,1:intervalLastCyclePhase:end)';

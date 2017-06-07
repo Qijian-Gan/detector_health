@@ -86,6 +86,7 @@ classdef load_IEN_configuration
         
         function [DevInv,DevData,SigInv,SigData,PlanPhase,LastCyclePhase]=parse_txt_detector(this,file)
             %% This function is to parse the organization configuration file (txt format)
+            %% This version is very slow. Switch to Matlab-Java
             
             location=this.folderLocationData;
             
@@ -452,7 +453,7 @@ classdef load_IEN_configuration
             end
         end
         
-        function save_data_by_year_month(this,data,type,strYearMonth)
+        function save_data_by_year_month(this,data,type,strYearMonth,subNetwork,SigAllUniqueSubnetwork)
             %% This function is used to save different types of data
             
             switch type
@@ -483,14 +484,37 @@ classdef load_IEN_configuration
                     
                 otherwise 
                     % save the device/signal/phase data
+                    switch type
+                        case {'DevInv','DevData'} % Detector Data/Inventory
+                            if(~isempty(subNetwork)) % If the subnetwork is not empty
+                                % Detectors inside I-210 CC network
+                                ids=subNetwork(:,1);
+                                idx=(ismember({data.OrgID}',{'3:1','5:1'})|...
+                                    (ismember({data.OrgID}',{'29:1'})& ismember({data.DeviceID}',ids)));
+                                data(~idx,:)=[];
+                            end
+                            
+                        case {'SigInv','SigData'}
+                            if(~isempty(SigAllUniqueSubnetwork)) % If the subnetwork is not empty
+                                % Detectors inside I-210 CC network
+                                ids=SigAllUniqueSubnetwork(:,1);
+                                idx=(ismember({data.OrgID}',{'3:1','5:1'})|...
+                                    (ismember({data.OrgID}',{'29:1'})& ismember({data.DeviceID}',ids)));
+                                data(~idx,:)=[];
+                            end
+                        otherwise % Signal Data/Inventory
+                            idx=ismember({data.OrgID}',{'3:1','5:1','29:1'});
+                            data(~idx,:)=[];
+                    end                  
+
                     orgIDs={data.OrgID}';
                     deviceIDs={data.DeviceID}';
                     orgDevide=strcat(orgIDs,deviceIDs);
                     [uniqueOrgDevice,~]=unique(orgDevide);
                     numDevice=size(uniqueOrgDevice,1);
-                    folderLocation=this.outputFolderLocation;
-                                        
-                    parfor i=1:numDevice
+                    folderLocation=this.outputFolderLocation;                  
+                    
+                    parfor i=1:numDevice                                                
                         load_IEN_configuration.update_and_save_data_by_type_year_month...
                             (data,uniqueOrgDevice,orgDevide,i,folderLocation,type,strYearMonth);
                     end
@@ -504,17 +528,16 @@ classdef load_IEN_configuration
          function update_and_save_data_by_type_year_month(dataAll,uniqueOrgDevice,orgDevide,address,...
                  outputFolderLocation,type,strYearMonth)
             %% This function is used to save device data by type, year, month
-            
+
             % Get the data
             idx=ismember(orgDevide,uniqueOrgDevice{address,:});
-            data=dataAll(idx);
-
+            data=dataAll(idx,:);
+                        
             if(sum(idx))
                 % Get the file name
                 OrgID=data(1).OrgID;
                 City=load_IEN_configuration.findCityWithOrgID(OrgID);
                 DeviceID=data(1).DeviceID;
-                DeviceID=replace(DeviceID,' ',''); 
                 [fileName]=load_IEN_configuration.create_file_name_by_type_year_month...
                     (outputFolderLocation,City,DeviceID,type,strYearMonth);
                 
@@ -537,26 +560,16 @@ classdef load_IEN_configuration
                         if(sum(idxDate)) % If find the right date
                             TimeAll={dataByType(idxDate).Data.Time}'; % Get all Times
                             
-                            for j=1:size(dataByDate,1)
-                                Time=dataByDate(j).Time;
-                                idxTime=ismember(TimeAll,Time);
-                                
-                                if(~sum(idxTime)) % A new last updated time?
-                                    [dataStructure]=load_IEN_configuration.get_struct_data_by_type(dataByDate(j),type);
-                                    dataByType(idxDate).Data=[dataByType(idxDate).Data;dataStructure];
-                                end
-                            end
+                            Time={dataByDate.Time}';
+                            idxTime=ismember(Time,TimeAll);
+                            dataByType(idxDate).Data=[dataByType(idxDate).Data;dataByDate(~idxTime,:)];
+
                         else % A new Date?
                             
                             % Create a temporary data structure
                             tmpData=struct(...
                                 'Date', Date,...
-                                'Data', []);      
-                            
-                            for j=1:size(dataByDate,1) % Loop for each time stamp
-                                [dataStructure]=load_IEN_configuration.get_struct_data_by_type(dataByDate(j),type);
-                                tmpData.Data=[tmpData.Data;dataStructure];
-                            end                            
+                                'Data', dataByDate);                                                       
                             dataByType=[dataByType;tmpData];
                             
                         end
@@ -573,11 +586,8 @@ classdef load_IEN_configuration
                         dataByType(i).Date=Date;
                         
                         idxDate=ismember(DateAll,Date);
-                        dataByDate=data(idxDate,:);                            
-                        for j=1:size(dataByDate,1) % Loop for each time stamp
-                            [dataStructure]=load_IEN_configuration.get_struct_data_by_type(dataByDate(j),type);
-                            dataByType(i).Data=[dataByType(i).Data;dataStructure];
-                        end
+                        dataByDate=data(idxDate,:);     
+                        dataByType(i).Data=[dataByType(i).Data;dataByDate];                            
                     end
                 end
                 

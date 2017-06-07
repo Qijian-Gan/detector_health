@@ -13,8 +13,7 @@ classdef extract_health_report
     methods ( Access = public )
         
         function [this]=extract_health_report(params,city,folderLocation)
-            % This function is to extract the health report for given
-            % settings
+            %% This function is to extract the health report for given settings
             if nargin>2
                 this.folderLocation=folderLocation;
             else
@@ -31,12 +30,11 @@ classdef extract_health_report
         end
      
         function [this]=extract_all(this)
-            % This function is to extract the detector reports for all
-            % detectors
+            %% This function is to extract the detector reports for all detectors
             
             numDetector=size(this.DetectorList.detectorConfig,1);
             
-            % Get Detector IDs
+            % Get Detector IDs and those within the detour routes
             IntersectionIDs=[this.DetectorList.detectorConfig.IntersectionID]';
             SensorIDs=[this.DetectorList.detectorConfig.SensorID]';
             DetectorIDs=[];
@@ -76,21 +74,21 @@ classdef extract_health_report
                        if(isempty(tmpData))
                            performance(i,j)=-1; % No data
                        else
-                           performance(i,j)=tmpData(:,end);
+                           performance(i,j)=tmpData(:,end); % The last column is detector health indicator
                        end
                    end
                end
            end          
            
-           avgPerformance(1,:)= mean(performance>0)*100;
-           avgPerformance(2,:)= mean(performance==0)*100;
-           avgPerformance(3,:)= mean(performance<0)*100;
+           avgPerformance(1,:)= mean(performance>0)*100; % Good
+           avgPerformance(2,:)= mean(performance==0)*100; % Bad
+           avgPerformance(3,:)= mean(performance<0)*100; % No data
            
-           avgPerformanceNum(1,:)= sum(performance>0);
-           avgPerformanceNum(2,:)= sum(performance==0);
-           avgPerformanceNum(3,:)= sum(performance<0);
+           avgPerformanceNum(1,:)= sum(performance>0); % Good
+           avgPerformanceNum(2,:)= sum(performance==0); % Bad
+           avgPerformanceNum(3,:)= sum(performance<0); % No data
            
-           for k=0:1:1
+           for k=0:1:1 % Detour and non-detour routes
                idx=(DetourRoute==1-k);               
                performanceDetour(3*(k)+1,:)= mean(performance(idx,:)>0)*100;
                performanceDetour(3*(k)+2,:)= mean(performance(idx,:)==0)*100;

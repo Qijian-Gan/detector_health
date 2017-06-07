@@ -4,6 +4,7 @@ package IENReaderByJava;
 import java.io.*;
 import java.util.*;
 
+
 public class Main {
 
     public Main(){
@@ -45,7 +46,8 @@ public class Main {
             String [] tmpArray;
             String [] tmpDateTime;
             String [] tmpPhase;
-
+            String [] tmpArrayWithoutSpace;
+            int j;
             while ((text = brIEN.readLine())!=null) {
 
                 tmpArray=text.split(","); // Split strings
@@ -56,8 +58,10 @@ public class Main {
                     //Ignore the first line
                     brIEN.readLine();
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
+                        //Get the date and time
                         tmpArray=text.split(",");
                         tmpDateTime = (tmpArray[2]).split(" ");
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
 
                         tmpDevInvString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
                         if(tmpArray.length==11){
@@ -88,7 +92,7 @@ public class Main {
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
                         tmpArray=text.split(",");
                         tmpDateTime = (tmpArray[2]).split(" ");
-
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
 
                         tmpDevDataString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
                         if(tmpArray.length==10){
@@ -119,6 +123,7 @@ public class Main {
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
                         tmpArray=text.split(",");
                         tmpDateTime = (tmpArray[2]).split(" ");
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
 
                         tmpIntSigInvString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
                         if(tmpArray.length==9){
@@ -149,6 +154,7 @@ public class Main {
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
                         tmpArray=text.split(",");
                         tmpDateTime = (tmpArray[2]).split(" ");
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
 
                         tmpIntSigDataString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
                         if(tmpArray.length==10){
@@ -176,6 +182,8 @@ public class Main {
                         tmpDateTime = (tmpArray[2]).split(" ");
                         tmpPhase =(tmpArray[3]).split("\\[");
                         tmpPhase =(tmpPhase[1]).split("]");
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
+
                         tmpPlanPhaseString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2]+","+tmpPhase[0];
                         listPlanPhase.add(tmpPlanPhaseString);
                     }
@@ -195,6 +203,8 @@ public class Main {
                         tmpDateTime = (tmpArray[2]).split(" ");
                         tmpPhase =(tmpArray[4]).split("\\[");
                         tmpPhase =(tmpPhase[1]).split("]");
+                        tmpArray[2]=tmpArray[2].replace(" ","/");
+
                         tmpLastCyclePhaseString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]
                                 +","+tmpDateTime[2]+","+tmpArray[3]+","+tmpPhase[0];
                         listLastCyclePhase.add(tmpLastCyclePhaseString);
@@ -215,5 +225,69 @@ public class Main {
         arr.add(listPlanPhase);
         arr.add(listLastCyclePhase);
         return arr;
+    }
+
+    public List redIENConnectionDataStatus(String IENDataFileName){
+
+        List<String> listIENStatus = new ArrayList<String>();
+
+        // Open a new file
+        File ienFile = new File(IENDataFileName);
+
+        // Check the existence of the file
+        if(!ienFile.exists())
+        {
+            System.out.println("Can not find the file!");
+            return null;
+        }
+
+        // If the file exists, do the following steps
+        try {
+            FileReader frIEN = new FileReader(ienFile);
+            BufferedReader brIEN = new BufferedReader(frIEN);
+
+            String text = null;
+            String [] tmpArray;
+
+            // Ignore the first two lines
+            text = brIEN.readLine();
+            text = brIEN.readLine();
+
+            // Starting from the third line
+            while ((text = brIEN.readLine())!=null) {
+
+                tmpArray=text.split(","); // Split strings
+
+                String tmpDate=tmpArray[0];
+                String tmpTime=tmpArray[1];
+
+                int totSum=
+                        Integer.parseInt(tmpArray[3])+ Integer.parseInt(tmpArray[27])+
+                        Integer.parseInt(tmpArray[6])+ Integer.parseInt(tmpArray[30])+
+                        Integer.parseInt(tmpArray[9])+ Integer.parseInt(tmpArray[33])+
+                        Integer.parseInt(tmpArray[12])+Integer.parseInt(tmpArray[36])+
+                        Integer.parseInt(tmpArray[15])+Integer.parseInt(tmpArray[39])+
+                        Integer.parseInt(tmpArray[18])+Integer.parseInt(tmpArray[42])+
+                        Integer.parseInt(tmpArray[21])+Integer.parseInt(tmpArray[45])+
+                        Integer.parseInt(tmpArray[24])+Integer.parseInt(tmpArray[48]);
+                String StatusIEN="0";
+                if(totSum>=1){
+                    StatusIEN="1";
+                }
+                String StatusLACO="0";
+                if(Integer.parseInt(tmpArray[45])==1){
+                    StatusLACO="1";
+                }
+                String totLACODetector=tmpArray[46];
+
+                listIENStatus.add(tmpDate+","+tmpTime+","+StatusIEN+","+StatusLACO+","+totLACODetector);
+            }
+            brIEN.close();
+        }catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return listIENStatus;
     }
 }
