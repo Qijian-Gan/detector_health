@@ -1,23 +1,7 @@
-%% This script is used to read the detector health reports
+%% This script is used to draw data inconsistency
 clear
 clc
 close all
-
-% % Get the current folder
-% currentFileLoc=findFolder.temp();
-% tmpFiles=dir(currentFileLoc);
-% idx=strmatch('Health_Report',{tmpFiles.name});
-% fileList=tmpFiles(idx,:);
-% idx=ismember({fileList.name},{'Health_Report_9901.mat'});
-% fileList(idx)=[];
-% 
-% DetectorHealthAll=[];
-% 
-% for i=1:size(fileList,1)
-%     load(fullfile(currentFileLoc,fileList(i).name));
-%     DetectorHealthAll=[DetectorHealthAll;dataAll];
-% end
-% save('DetectorHealthAll.mat','DetectorHealthAll')
 
 load('DetectorHealthAll.mat')
 
@@ -31,7 +15,7 @@ numDetector=length(detectorUnique);
 
 % Select the date
 dateUnique=unique(DetectorHealthAll(:,5));
-startDate=datenum('2017-1-1');
+startDate=datenum('2015-7-1');
 endDate=datenum('2017-5-27');
 dateSelect=dateUnique(dateUnique>=startDate & dateUnique<endDate);
 numDate=length(dateSelect);

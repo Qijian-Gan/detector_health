@@ -5,6 +5,7 @@ classdef health_analysis_update_criteria
         interval                % Time interval of the data samples
         saturation_flow         % Saturation flow per lane
         criteria_good           % Criteria to say a detector is good
+        laneInformation         % Lane information of the detectors
         
         cases                   % Combinations of {detector ID, year, month, day} inside the data file
         numCases                % Number of combinations
@@ -15,7 +16,7 @@ classdef health_analysis_update_criteria
     
     methods ( Access = public )
         
-        function [this]=health_analysis_update_criteria(data, params)
+        function [this]=health_analysis_update_criteria(data, params,laneInformation)
             %% This function is to load the detector config file
             
             [this.data]=health_analysis_update_criteria.struct2matrix_detector_data(data);
@@ -24,6 +25,12 @@ classdef health_analysis_update_criteria
             this.interval=params.timeInterval; % Intervel of the data points            
             this.saturation_flow=params.saturationFlow; % Saturation flow            
             this.criteria_good=params.criteria_good; % Criteria to determine good detectors
+            
+            if(nargin==3)
+                this.laneInformation=laneInformation;
+            else
+                this.laneInformation=[];
+            end
             
             % Get the number of cases in the data file
             this.cases=unique(this.data(:,1:4),'rows'); % 1:4--Detector ID, year, month, day
@@ -48,6 +55,14 @@ classdef health_analysis_update_criteria
                 metrics.Year=this.cases(i,2);
                 metrics.Month=this.cases(i,3);
                 metrics.Day=this.cases(i,4);
+                
+                idx=ismember(this.laneInformation(:,1),this.cases(i,1));
+                if(sum(idx)>0)
+                    numLane=this.laneInformation(idx,2);
+                else
+                    numLane=1;
+                    disp(strcat('A new detector with ID=',num2str(metrics.DetectorID)));
+                end
                 
                 % Also get the date number in matlab so that it would be
                 % easier for later usage
@@ -77,7 +92,8 @@ classdef health_analysis_update_criteria
                 metrics.MaxZeroValues=health_analysis_update_criteria.check_zero_values(tmpData,this.interval);
                 
                 % Fourth: High Value Diagnostic
-                metrics.HighValueRate=health_analysis_update_criteria.check_high_values(tmpData,numInterval,this.saturation_flow);
+                metrics.HighValueRate=health_analysis_update_criteria.check_high_values(tmpData,numInterval,...
+                    this.saturation_flow,numLane);
                 
                 % Fifth: Constant Value Diagnostic
                 metrics.ConstantOrNot=health_analysis_update_criteria.check_constant_values(tmpData);
@@ -231,16 +247,16 @@ classdef health_analysis_update_criteria
             maxLengthZeroValues=maxLengthZeroValues*interval/3600; % Return the value in hours
         end
      
-        function [rate]=check_high_values(data,numInterval,saturation_flow)
+        function [rate]=check_high_values(data,numInterval,saturation_flow,numLane)
             %% This function is used to check high values: High Value Diagnostic
             
-            % Note: the flow is hourly flow per lane
+            % Note: the flow is hourly flow per detector
             
             % Column 6: flow
             % Column 7: occ 
             % Column 8: speed (if available)
             
-            idx=(data(:,6)>saturation_flow);            
+            idx=(data(:,6)>saturation_flow*numLane);            
             rate=sum(idx)/numInterval*100;
         end
         

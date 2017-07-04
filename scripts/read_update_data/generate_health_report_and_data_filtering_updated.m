@@ -3,6 +3,13 @@ clear
 clc
 close all
 
+%% Load configuration file
+config=load_config('Arcadia_detector_config.xlsx');
+config.detectorConfig=config.detector_property('Detector_Properties');
+
+DetectorIDAndLane=[[config.detectorConfig.IntersectionID]'*100+[config.detectorConfig.SensorID]',...
+    [config.detectorConfig.NumberOfLanes]'];
+
 %% Load the list of files that have been read if it exists (saved in the 'Obj' folder)
 folderLocation=findFolder.objects;
 fileName=fullfile(folderLocation,'Detector_file_been_read_updated_criteria.mat');
@@ -15,11 +22,11 @@ else
 end
 
 %% Load the detector data and get the list of files that is needed to be updated
-dp=load_detector_data('K:\Arcadia_data\2014_All');
+% dp=load_detector_data('K:\Arcadia_data\2014_All');
 % dp=load_detector_data('K:\Arcadia_data\2015_All');
 % dp=load_detector_data('K:\Arcadia_data\2016_All');
 % dp=load_detector_data('K:\Arcadia_data\2017_All');
-% dp=load_detector_data('K:\Arcadia_data\2017');
+dp=load_detector_data('K:\Arcadia_data\2017');
 % dp=load_detector_data; % With empty input: Default folder ('data')
 
 fileList=dp.obtain_file_list(dp.folderLocation); % Get the list of detector files
@@ -57,7 +64,7 @@ for i=1:numFile
         data=dp.parse_csv(fileList(i).name, dp.folderLocation);
         
         % Run health analysis
-        hc=health_analysis_update_criteria(data,params);
+        hc=health_analysis_update_criteria(data,params,DetectorIDAndLane);
         hc.measures=hc.health_criteria;
         
         health_report=[health_report;hc.measures];

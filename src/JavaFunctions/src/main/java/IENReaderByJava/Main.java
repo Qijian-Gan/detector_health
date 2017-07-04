@@ -227,7 +227,7 @@ public class Main {
         return arr;
     }
 
-    public List redIENConnectionDataStatus(String IENDataFileName){
+    public List readIENConnectionDataStatus(String IENDataFileName){
 
         List<String> listIENStatus = new ArrayList<String>();
 
@@ -260,27 +260,17 @@ public class Main {
 
                 String tmpDate=tmpArray[0];
                 String tmpTime=tmpArray[1];
+                Double tmpRequestTime=Double.parseDouble(tmpArray[3]);
+                Double tmpProcessTime=Double.parseDouble(tmpArray[5]);
+                String Org;
+                if(tmpArray[6].equals("Arcadia 5:1"))
+                    Org="Arcadia";
+                else
+                    Org="LACO";
+                Integer tmpStatus=Integer.parseInt(tmpArray[7]);
+                Integer tmpNumDetector=Integer.parseInt(tmpArray[8]);
 
-                int totSum=
-                        Integer.parseInt(tmpArray[3])+ Integer.parseInt(tmpArray[27])+
-                        Integer.parseInt(tmpArray[6])+ Integer.parseInt(tmpArray[30])+
-                        Integer.parseInt(tmpArray[9])+ Integer.parseInt(tmpArray[33])+
-                        Integer.parseInt(tmpArray[12])+Integer.parseInt(tmpArray[36])+
-                        Integer.parseInt(tmpArray[15])+Integer.parseInt(tmpArray[39])+
-                        Integer.parseInt(tmpArray[18])+Integer.parseInt(tmpArray[42])+
-                        Integer.parseInt(tmpArray[21])+Integer.parseInt(tmpArray[45])+
-                        Integer.parseInt(tmpArray[24])+Integer.parseInt(tmpArray[48]);
-                String StatusIEN="0";
-                if(totSum>=1){
-                    StatusIEN="1";
-                }
-                String StatusLACO="0";
-                if(Integer.parseInt(tmpArray[45])==1){
-                    StatusLACO="1";
-                }
-                String totLACODetector=tmpArray[46];
-
-                listIENStatus.add(tmpDate+","+tmpTime+","+StatusIEN+","+StatusLACO+","+totLACODetector);
+                listIENStatus.add(tmpDate+","+tmpTime+","+Org+","+tmpRequestTime+","+tmpProcessTime+","+tmpStatus+","+tmpNumDetector);
             }
             brIEN.close();
         }catch (FileNotFoundException e) {

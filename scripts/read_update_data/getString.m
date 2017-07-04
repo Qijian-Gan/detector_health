@@ -36,13 +36,14 @@ DevInv=dp.dataFormatDevInv(OrgID,DeviceID,LastUpdate,Date,Time,Description,RoadN
 array=char(arrayByType(2).toString());
 tmpString=strsplit(array,'[');
 tmpString=strsplit(tmpString{1,2},']');
-arrayString=strrep(strsplit(tmpString{1,1},','),' ','');
+tmpString=strsplit(tmpString{1,1},',');
+arrayString=strrep(tmpString,' ','');
 
 intervalDevData=12;
 OrgID=arrayString(:,1:intervalDevData:end)';
 DeviceID=arrayString(:,2:intervalDevData:end)';
 LastUpdate=arrayString(:,3:intervalDevData:end)';
-Date=arrayString(:,4:intervalDevData:end)';
+Date=arrayString(:,4:intervalDevData:end)'; 
 Time=arrayString(:,5:intervalDevData:end)';
 State=arrayString(:,6:intervalDevData:end)';
 Speed=arrayString(:,7:intervalDevData:end)';
@@ -52,6 +53,26 @@ AvgSpeed=arrayString(:,10:intervalDevData:end)';
 AvgOccupancy=arrayString(:,11:intervalDevData:end)';
 AvgVolume=arrayString(:,12:intervalDevData:end)';
 
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    State(idx)=[];
+    Speed(idx)=[];
+    Occupancy(idx)=[];
+    Volume(idx)=[];
+    AvgSpeed(idx)=[];
+    AvgOccupancy(idx)=[];
+    AvgVolume(idx)=[];
+end
+    
 DevData=dp.dataFormatDevData(OrgID,DeviceID,LastUpdate,Date,Time,State,Speed,Occupancy,Volume,...
     AvgSpeed,AvgOccupancy,AvgVolume);
 

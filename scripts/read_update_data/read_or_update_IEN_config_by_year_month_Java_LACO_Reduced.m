@@ -25,9 +25,12 @@ else
 end
 
 % Load the IEN configuration data and get the list of files that are needed to be updated
-currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
 
-currentDataLoc='D:\BOX\Box Sync\IEN_Data';
+% currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
+% currentDataLoc='D:\BOX\Box Sync\IEN_Data';
+
+currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
+currentDataLoc='D:\BOX\IEN_Data';
 movedFileLoc='D:\BOX\IEN_Data_Read';
 
 % currentDataLoc='D:\BOX\IEN_Data_Unprocessed';

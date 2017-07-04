@@ -16,7 +16,7 @@ classdef data_filtering_updated_criteria
     
     methods ( Access = public )
         
-        function [this]=data_filtering_updated_criteria(folderLocationFiltering,params,data, measures)
+        function [this]=data_filtering_updated_criteria(folderLocationFiltering,params,data, measures,organization)
             %% This function is to do the data filtering
             
             % Obtain inputs
@@ -37,7 +37,11 @@ classdef data_filtering_updated_criteria
                 detectorID=detectorIDAll(i); % Get the ID
                 
                 % Get the file name and load the processed data
-                fileName=fullfile(this.folderLocationFiltering,sprintf('Processed_data_%d.mat',detectorID));
+                if(nargin==5)
+                    fileName=fullfile(this.folderLocationFiltering,sprintf('Processed_data_%s_%d.mat',organization,detectorID));
+                else
+                    fileName=fullfile(this.folderLocationFiltering,sprintf('Processed_data_%d.mat',detectorID));
+                end
                 if(exist(fileName,'file'))
                     load(fileName); % Variable: process_data, which is a structure 
                 else

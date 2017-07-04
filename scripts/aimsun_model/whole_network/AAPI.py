@@ -254,6 +254,10 @@ def AKIActionRemoveAction(*args):
   return _AAPI.AKIActionRemoveAction(*args)
 AKIActionRemoveAction = _AAPI.AKIActionRemoveAction
 
+def AKIActionRemoveActionByID(*args):
+  return _AAPI.AKIActionRemoveActionByID(*args)
+AKIActionRemoveActionByID = _AAPI.AKIActionRemoveActionByID
+
 def AKIActionReset():
   return _AAPI.AKIActionReset()
 AKIActionReset = _AAPI.AKIActionReset
@@ -282,25 +286,49 @@ def AKIActionModifyNextTurningODAction(*args):
   return _AAPI.AKIActionModifyNextTurningODAction(*args)
 AKIActionModifyNextTurningODAction = _AAPI.AKIActionModifyNextTurningODAction
 
+def AKIActionModifyNextTurningODActionByID(*args):
+  return _AAPI.AKIActionModifyNextTurningODActionByID(*args)
+AKIActionModifyNextTurningODActionByID = _AAPI.AKIActionModifyNextTurningODActionByID
+
 def AKIActionModifyNextTurningResultAction(*args):
   return _AAPI.AKIActionModifyNextTurningResultAction(*args)
 AKIActionModifyNextTurningResultAction = _AAPI.AKIActionModifyNextTurningResultAction
+
+def AKIActionModifyNextTurningResultActionByID(*args):
+  return _AAPI.AKIActionModifyNextTurningResultActionByID(*args)
+AKIActionModifyNextTurningResultActionByID = _AAPI.AKIActionModifyNextTurningResultActionByID
 
 def AKIActionModifyChangeDestAction(*args):
   return _AAPI.AKIActionModifyChangeDestAction(*args)
 AKIActionModifyChangeDestAction = _AAPI.AKIActionModifyChangeDestAction
 
+def AKIActionModifyChangeDestActionByID(*args):
+  return _AAPI.AKIActionModifyChangeDestActionByID(*args)
+AKIActionModifyChangeDestActionByID = _AAPI.AKIActionModifyChangeDestActionByID
+
 def AKIActionModifyNextSubPathResultAction(*args):
   return _AAPI.AKIActionModifyNextSubPathResultAction(*args)
 AKIActionModifyNextSubPathResultAction = _AAPI.AKIActionModifyNextSubPathResultAction
+
+def AKIActionModifyNextSubPathResultActionByID(*args):
+  return _AAPI.AKIActionModifyNextSubPathResultActionByID(*args)
+AKIActionModifyNextSubPathResultActionByID = _AAPI.AKIActionModifyNextSubPathResultActionByID
 
 def AKIActionModifyNextSubPathODAction(*args):
   return _AAPI.AKIActionModifyNextSubPathODAction(*args)
 AKIActionModifyNextSubPathODAction = _AAPI.AKIActionModifyNextSubPathODAction
 
+def AKIActionModifyNextSubPathODActionByID(*args):
+  return _AAPI.AKIActionModifyNextSubPathODActionByID(*args)
+AKIActionModifyNextSubPathODActionByID = _AAPI.AKIActionModifyNextSubPathODActionByID
+
 def AKIActionModifyCloseTurningODAction(*args):
   return _AAPI.AKIActionModifyCloseTurningODAction(*args)
 AKIActionModifyCloseTurningODAction = _AAPI.AKIActionModifyCloseTurningODAction
+
+def AKIActionModifyCloseTurningODActionByID(*args):
+  return _AAPI.AKIActionModifyCloseTurningODActionByID(*args)
+AKIActionModifyCloseTurningODActionByID = _AAPI.AKIActionModifyCloseTurningODActionByID
 class InfVeh(_object):
     __swig_setmethods__ = {}
     __setattr__ = lambda self, name, value: _swig_setattr(self, InfVeh, name, value)
@@ -754,6 +782,14 @@ AKIVehGetVehTypeName = _AAPI.AKIVehGetVehTypeName
 def AKIVehGetVehTypeInternalPosition(*args):
   return _AAPI.AKIVehGetVehTypeInternalPosition(*args)
 AKIVehGetVehTypeInternalPosition = _AAPI.AKIVehGetVehTypeInternalPosition
+
+def AKIVehGetLeaderId(*args):
+  return _AAPI.AKIVehGetLeaderId(*args)
+AKIVehGetLeaderId = _AAPI.AKIVehGetLeaderId
+
+def AKIVehGetFollowerId(*args):
+  return _AAPI.AKIVehGetFollowerId(*args)
+AKIVehGetFollowerId = _AAPI.AKIVehGetFollowerId
 
 def AKIVehTypeGetImprudentLaneChanging(*args):
   return _AAPI.AKIVehTypeGetImprudentLaneChanging(*args)
@@ -2748,6 +2784,10 @@ def AKIStateDemandSetDemandSection(*args):
   return _AAPI.AKIStateDemandSetDemandSection(*args)
 AKIStateDemandSetDemandSection = _AAPI.AKIStateDemandSetDemandSection
 
+def AKIStateDemandSetTurningPercentage(*args):
+  return _AAPI.AKIStateDemandSetTurningPercentage(*args)
+AKIStateDemandSetTurningPercentage = _AAPI.AKIStateDemandSetTurningPercentage
+
 def AKIPastCostAreCostsPerVehicleType():
   return _AAPI.AKIPastCostAreCostsPerVehicleType()
 AKIPastCostAreCostsPerVehicleType = _AAPI.AKIPastCostAreCostsPerVehicleType
@@ -3134,6 +3174,42 @@ def ECIGetCurrentStateofSignalGroupbyName(*args):
   return _AAPI.ECIGetCurrentStateofSignalGroupbyName(*args)
 ECIGetCurrentStateofSignalGroupbyName = _AAPI.ECIGetCurrentStateofSignalGroupbyName
 
+def ECIGetTypeControlofJunction(*args):
+  return _AAPI.ECIGetTypeControlofJunction(*args)
+ECIGetTypeControlofJunction = _AAPI.ECIGetTypeControlofJunction
+
+def ECIGetNbPhasesofJunction(*args):
+  return _AAPI.ECIGetNbPhasesofJunction(*args)
+ECIGetNbPhasesofJunction = _AAPI.ECIGetNbPhasesofJunction
+
+def ECIGetNbRingsJunction(*args):
+  return _AAPI.ECIGetNbRingsJunction(*args)
+ECIGetNbRingsJunction = _AAPI.ECIGetNbRingsJunction
+
+def ECIGetNbBarriersJunction(*args):
+  return _AAPI.ECIGetNbBarriersJunction(*args)
+ECIGetNbBarriersJunction = _AAPI.ECIGetNbBarriersJunction
+
+def ECIGetDurationsPhaseofJunction(*args):
+  return _AAPI.ECIGetDurationsPhaseofJunction(*args)
+ECIGetDurationsPhaseofJunction = _AAPI.ECIGetDurationsPhaseofJunction
+
+def ECIGetYellowTimeofJunction(*args):
+  return _AAPI.ECIGetYellowTimeofJunction(*args)
+ECIGetYellowTimeofJunction = _AAPI.ECIGetYellowTimeofJunction
+
+def ECIGetYellowTimePhaseofJunction(*args):
+  return _AAPI.ECIGetYellowTimePhaseofJunction(*args)
+ECIGetYellowTimePhaseofJunction = _AAPI.ECIGetYellowTimePhaseofJunction
+
+def ECISetYellowTimePhaseofJunction(*args):
+  return _AAPI.ECISetYellowTimePhaseofJunction(*args)
+ECISetYellowTimePhaseofJunction = _AAPI.ECISetYellowTimePhaseofJunction
+
+def ECIIsAnInterPhaseofJunction(*args):
+  return _AAPI.ECIIsAnInterPhaseofJunction(*args)
+ECIIsAnInterPhaseofJunction = _AAPI.ECIIsAnInterPhaseofJunction
+
 def ECIGetActuatedParamsPassageTime(*args):
   return _AAPI.ECIGetActuatedParamsPassageTime(*args)
 ECIGetActuatedParamsPassageTime = _AAPI.ECIGetActuatedParamsPassageTime
@@ -3166,17 +3242,9 @@ def ECISetActuatedParamsForceOFFPermissivePeriod(*args):
   return _AAPI.ECISetActuatedParamsForceOFFPermissivePeriod(*args)
 ECISetActuatedParamsForceOFFPermissivePeriod = _AAPI.ECISetActuatedParamsForceOFFPermissivePeriod
 
-def ECIGetNbRingsJunction(*args):
-  return _AAPI.ECIGetNbRingsJunction(*args)
-ECIGetNbRingsJunction = _AAPI.ECIGetNbRingsJunction
-
 def ECIGetCurrentNbRingsJunction(*args):
   return _AAPI.ECIGetCurrentNbRingsJunction(*args)
 ECIGetCurrentNbRingsJunction = _AAPI.ECIGetCurrentNbRingsJunction
-
-def ECIGetNbBarriersJunction(*args):
-  return _AAPI.ECIGetNbBarriersJunction(*args)
-ECIGetNbBarriersJunction = _AAPI.ECIGetNbBarriersJunction
 
 def ECIGetCurrentNbBarriersJunction(*args):
   return _AAPI.ECIGetCurrentNbBarriersJunction(*args)
@@ -3465,6 +3533,10 @@ ANGConnGetScenarioId = _AAPI.ANGConnGetScenarioId
 def ANGConnGetObjectId(*args):
   return _AAPI.ANGConnGetObjectId(*args)
 ANGConnGetObjectId = _AAPI.ANGConnGetObjectId
+
+def ANGConnGetObjectIdByType(*args):
+  return _AAPI.ANGConnGetObjectIdByType(*args)
+ANGConnGetObjectIdByType = _AAPI.ANGConnGetObjectIdByType
 
 def ANGConnGetObjectNameA(*args):
   return _AAPI.ANGConnGetObjectNameA(*args)
