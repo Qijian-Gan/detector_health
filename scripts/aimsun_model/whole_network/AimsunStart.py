@@ -181,8 +181,12 @@ def UpdateTurningDescription(numEntranceSections,entranceSections,junctionObj,De
             descriptions.append(individualDescription)
             if(individualDescription is not None): # If we have additional descriptions from the model
                 # Check whether it is a left-turn movement or not
-                idxLeft=individualDescription.contains('Left')
-                idxUTurn = individualDescription.contains('U Turn')
+                idxLeft=False
+                if (individualDescription.find("Left")>=0):
+                    idxLeft=True
+                idxUTurn=False
+                if (individualDescription.find("U Turn")>=0):
+                    idxUTurn=True
                 if(idxLeft or idxUTurn): # If yes
                     leftTurnIdx.append(1)
                     lastLeftIdx=k # Get the index of the last left turn movement
@@ -347,9 +351,9 @@ def ExtractDetectorInformation(model,outputLocation):
             sectionObj = model.getCatalog().find(section.getId())  # Get the section object
             numLanes = len(sectionObj.getLanes())
 
-            if (detectorExtID.isEmpty()):
+            if (detectorExtID == ''):
                 detectorExtID='NA'
-            if (description.isEmpty()):
+            if (description==''):
                 description = 'NA'
 
             # Note: lanes are labeled from rightmost to leftmost in our output file
@@ -395,7 +399,7 @@ def AddAttributeToDetector(model,outputLocation):
             detectorExtID = detectorObj.getExternalId()  # Get the external ID
             symbol = 0
             for j in range(len(detectorIDFull)):
-                if (detectorExtID.toInt() == int(detectorIDFull[j])):
+                if (detectorExtID == str(detectorIDFull[j])):
                     detectorObj.setDescription(movements[j])
                     symbol = 1
                     break
@@ -418,7 +422,7 @@ def ExtractControlPlanInformation(model,outputLocation):
     numControlPlans = 0
     for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKControlPlan")):
         numControlPlans = numControlPlans + len(types)
-    print numControlPlans
+
     ControlPlanFile.write('Number of control plans:\n')
     ControlPlanFile.write(('%i\n') % numControlPlans)
     ControlPlanFile.write('\n')
@@ -446,7 +450,8 @@ def ExtractControlPlanInformation(model,outputLocation):
             # Loop for each control junction
             for junction in controlJunctions.itervalues():
                 # Get the junction information
-                node = junction.getNode()
+                #node =junction.getNode()
+                node= model.getCatalog().find(junction.getNode())
                 id = node.getId()
                 name = node.getName()
                 # print (("ID=%i, ExtID=%s, Name=%s ,Junction ID=%i, Junction Name=%s \n") % (planID, planExtID, planName, id, name))

@@ -320,7 +320,6 @@ AimsunProjectSetting=struct(...
     'DefaultSigInfFile',get(handles.DefaultSigInfFile,'String'),...
     'OutputFolder',handles.InputFolder.String);
 
-
 outputLocation=findFolder.GUI_temp;
 save(fullfile(outputLocation,'AimsunProjectSetting.mat'),'AimsunProjectSetting');
 
