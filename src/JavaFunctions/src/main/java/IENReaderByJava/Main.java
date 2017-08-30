@@ -46,7 +46,6 @@ public class Main {
             String [] tmpArray;
             String [] tmpDateTime;
             String [] tmpPhase;
-            String [] tmpArrayWithoutSpace;
             int j;
             while ((text = brIEN.readLine())!=null) {
 
@@ -59,27 +58,7 @@ public class Main {
                     brIEN.readLine();
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
                         //Get the date and time
-                        tmpArray=text.split(",");
-                        tmpDateTime = (tmpArray[2]).split(" ");
-                        tmpArray[2]=tmpArray[2].replace(" ","/");
-
-                        tmpDevInvString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
-                        if(tmpArray.length==11){
-                            tmpDevInvString= tmpDevInvString+","+tmpArray[3]+","+tmpArray[4]+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10];
-                        }
-                        else if(tmpArray.length==12){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4];
-                            tmpDevInvString= tmpDevInvString+","+tmp+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10]+","+tmpArray[11];
-                        }else if(tmpArray.length==13){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4]+"&"+tmpArray[5];
-                            tmpDevInvString= tmpDevInvString+","+tmp+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10]+","+tmpArray[11]+","+tmpArray[12];
-                        }else{
-                            System.out.println("Wrong input string type!");
-                            return null;
-                        }
+                        tmpDevInvString=stringProcessing(text,11, "DetInv");
                         listDevInv.add(tmpDevInvString);
                     }
                 }
@@ -90,27 +69,7 @@ public class Main {
                     //Ignore the first line
                     brIEN.readLine();
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
-                        tmpArray=text.split(",");
-                        tmpDateTime = (tmpArray[2]).split(" ");
-                        tmpArray[2]=tmpArray[2].replace(" ","/");
-
-                        tmpDevDataString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
-                        if(tmpArray.length==10){
-                            tmpDevDataString= tmpDevDataString+","+tmpArray[3]+","+tmpArray[4]+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9];
-                        }
-                        else if(tmpArray.length==11){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4];
-                            tmpDevDataString= tmpDevDataString+","+tmp+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10];
-                        }else if(tmpArray.length==12){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4]+"&"+tmpArray[5];
-                            tmpDevDataString= tmpDevDataString+","+tmp+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10]+","+tmpArray[11];
-                        }else{
-                            System.out.println("Wrong input string type!");
-                            return null;
-                        }
+                        tmpDevDataString=stringProcessing(text,10,"DetData");
                         listDevData.add(tmpDevDataString);
                     }
                 }
@@ -121,27 +80,7 @@ public class Main {
                     //Ignore the first line
                     brIEN.readLine();
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
-                        tmpArray=text.split(",");
-                        tmpDateTime = (tmpArray[2]).split(" ");
-                        tmpArray[2]=tmpArray[2].replace(" ","/");
-
-                        tmpIntSigInvString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
-                        if(tmpArray.length==9){
-                            tmpIntSigInvString= tmpIntSigInvString+","+tmpArray[3]+","+tmpArray[4]+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8];
-                        }
-                        else if(tmpArray.length==10){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4];
-                            tmpIntSigInvString= tmpIntSigInvString+","+tmp+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9];
-                        }else if(tmpArray.length==11){
-                            String tmp=tmpArray[3]+"&"+tmpArray[4]+"&"+tmpArray[5];
-                            tmpIntSigInvString= tmpIntSigInvString+","+tmp+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9]+","+tmpArray[10];
-                        }else{
-                            System.out.println("Wrong input string type!");
-                            return null;
-                        }
+                        tmpIntSigInvString=stringProcessing(text,9,"SigInv");
                         listIntSigInv.add(tmpIntSigInvString);
                     }
                 }
@@ -152,18 +91,7 @@ public class Main {
                     //Ignore the first line
                     brIEN.readLine();
                     while((text = brIEN.readLine()) != null && text.length()!=0) {
-                        tmpArray=text.split(",");
-                        tmpDateTime = (tmpArray[2]).split(" ");
-                        tmpArray[2]=tmpArray[2].replace(" ","/");
-
-                        tmpIntSigDataString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
-                        if(tmpArray.length==10){
-                            tmpIntSigDataString= tmpIntSigDataString+","+tmpArray[3]+","+tmpArray[4]+","+tmpArray[5]+","+tmpArray[6]
-                                    +","+tmpArray[7]+","+tmpArray[8]+","+tmpArray[9];
-                        }else{
-                            System.out.println("Wrong input string type!");
-                            return null;
-                        }
+                        tmpIntSigDataString=stringProcessing(text,10,"SigData");
                         listIntSigData.add(tmpIntSigDataString);
                     }
                 }
@@ -179,7 +107,12 @@ public class Main {
                             System.out.println("Wrong input string type!");
                             return null;
                         }
+                        tmpArray[0] = tmpArray[0].replace(" ", ""); //Get rid of space
+                        tmpArray[1] = tmpArray[1].replace(" ", ""); //Get rid of space
+                        tmpArray[3] = tmpArray[3].replace(" ", ""); //Get rid of space
+
                         tmpDateTime = (tmpArray[2]).split(" ");
+
                         tmpPhase =(tmpArray[3]).split("\\[");
                         tmpPhase =(tmpPhase[1]).split("]");
                         tmpArray[2]=tmpArray[2].replace(" ","/");
@@ -200,6 +133,11 @@ public class Main {
                             System.out.println("Wrong input string type!");
                             return null;
                         }
+                        tmpArray[0] = tmpArray[0].replace(" ", ""); //Get rid of space
+                        tmpArray[1] = tmpArray[1].replace(" ", ""); //Get rid of space
+                        tmpArray[3] = tmpArray[3].replace(" ", ""); //Get rid of space
+                        tmpArray[4] = tmpArray[4].replace(" ", ""); //Get rid of space
+
                         tmpDateTime = (tmpArray[2]).split(" ");
                         tmpPhase =(tmpArray[4]).split("\\[");
                         tmpPhase =(tmpPhase[1]).split("]");
@@ -226,6 +164,105 @@ public class Main {
         arr.add(listLastCyclePhase);
         return arr;
     }
+
+    public String stringProcessing(String text,int DefaultLength, String Type)
+    {
+        String [] tmpArray;
+        String [] tmpDateTime;
+        String tmpString;
+
+        tmpArray=text.split(",");
+        tmpArray[0] = tmpArray[0].replace(" ", ""); //Get rid of space
+        tmpArray[1] = tmpArray[1].replace(" ", ""); //Get rid of space
+
+        tmpDateTime = (tmpArray[2]).split(" ");
+        tmpArray[2]=tmpArray[2].replace(" ","/");
+        tmpString=tmpArray[0]+","+tmpArray[1]+","+tmpArray[2]+","+tmpDateTime[1]+","+tmpDateTime[2];
+
+        int addLoc;
+        String tmp;
+        if(Type.equals("DetInv")){ //If it is device inventory
+            // Reconstruct the description part
+            if(tmpArray.length==DefaultLength){
+                tmp=tmpArray[3];
+                addLoc=4;
+            }
+            else if(tmpArray.length==DefaultLength+1){
+                tmp=tmpArray[3]+"&"+tmpArray[4];
+                addLoc=5;
+            }else if(tmpArray.length==DefaultLength+2){
+                tmp=tmpArray[3]+"&"+tmpArray[4]+"&"+tmpArray[5];
+                addLoc=6;
+            }else{
+                System.out.println("Wrong input string type!");
+                return null;
+            }
+            tmp=tmp.replace(" / ","&");
+            tmp=tmp.replace("/","&");
+            tmp=tmp.replace(" @ ","&");
+            tmp=tmp.replace("@","&");
+            tmp=tmp.replace(" ","/");
+        }
+        else if(Type.equals("SigInv")){ //If it is signal inventory
+            // Reconstruct the description part
+            if(tmpArray.length==DefaultLength){
+                tmp=tmpArray[4];
+                addLoc=5;
+            }
+            else if(tmpArray.length==DefaultLength+1){
+                tmp=tmpArray[4]+"&"+tmpArray[5];
+                addLoc=6;
+            }else if(tmpArray.length==DefaultLength+2){
+                tmp=tmpArray[4]+"&"+tmpArray[5]+"&"+tmpArray[6];
+                addLoc=7;
+            }else{
+                System.out.println("Wrong input string type!");
+                return null;
+            }
+            tmp=tmp.replace(" / ","&");
+            tmp=tmp.replace("/","&");
+            tmp=tmp.replace(" @ ","&");
+            tmp=tmp.replace("@","&");
+            tmp=tmp.replace(" ","");
+
+            tmpArray[3]=tmpArray[3].replace(" ","/");
+            tmp=tmpArray[3]+","+tmp;
+
+        }
+        else{ //For other cases
+            // Reconstruct the description part
+            if(tmpArray.length==DefaultLength){
+                tmp=tmpArray[3];
+                addLoc=4;
+            }
+            else if(tmpArray.length==DefaultLength+1){
+                tmp=tmpArray[3]+"&"+tmpArray[4];
+                addLoc=5;
+            }else if(tmpArray.length==DefaultLength+2){
+                tmp=tmpArray[3]+"&"+tmpArray[4]+"&"+tmpArray[5];
+                addLoc=6;
+            }else{
+                System.out.println("Wrong input string type!");
+                return null;
+            }
+            tmp=tmp.replace(" ","");
+        }
+        tmpString= tmpString+","+tmp;
+
+        // Add the rest of the string
+        for (int i=addLoc;i<tmpArray.length;i++)
+        {
+            if(tmpArray[i].equals(" ")) {
+                tmpString = tmpString + "," + "NA";
+            }
+            else{
+                tmpArray[i]=tmpArray[i].replace(" ","");
+                tmpString= tmpString+","+tmpArray[i];
+            }
+        }
+        return tmpString;
+    }
+
 
     public List readIENConnectionDataStatus(String IENDataFileName){
 

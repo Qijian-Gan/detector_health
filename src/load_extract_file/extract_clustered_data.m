@@ -27,13 +27,18 @@ classdef extract_clustered_data
             end             
         end
          
-        function extract_to_aimsun_by_day_of_week(this,daynum)
+        function extract_to_aimsun_by_day_of_week(this,daynum,year)
             % This function is to extract to aimsun
             
             day={'All','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Weekday','Weekend'};
             
-            inputFileName=fullfile(this.inputFolderLocation,sprintf('Clustered_data_%s.mat',day{daynum}));
-            outputFileName=fullfile(this.inputFolderLocation,sprintf('Aimsun_data_%s.csv',day{daynum}));
+            if(isempty(year))
+                inputFileName=fullfile(this.inputFolderLocation,sprintf('Clustered_data_%s.mat',day{daynum}));
+                outputFileName=fullfile(this.inputFolderLocation,sprintf('Aimsun_data_%s.csv',day{daynum}));
+            else
+                inputFileName=fullfile(this.inputFolderLocation,sprintf('Clustered_data_%s_%d.mat',day{daynum},year));
+                outputFileName=fullfile(this.inputFolderLocation,sprintf('Aimsun_data_%s_%d.csv',day{daynum},year));
+            end
             
             if(exist(inputFileName,'file'))
                 load(inputFileName);
@@ -46,7 +51,11 @@ classdef extract_clustered_data
                 % Start to write data to a csv file
                 fileID = fopen(outputFileName,'w');
                 
-                fprintf(fileID,'Detector ID,Time,count (#/5min),volume(vph),occupancy (sec/hr),speed,delay,stops\n');
+                if(isempty(year))
+                    fprintf(fileID,'Detector ID,Time,count (#/5min),volume(vph),occupancy (%%),speed,delay,stops\n');
+                else
+                    fprintf(fileID,'Detector ID,Time,count (#/5min),volume(vph),occupancy (%%),speed,delay,stops,movement\n');
+                end
                 time=data_good(1).data.time;
                 interval=time(end)-time(end-1);
                 
@@ -73,11 +82,22 @@ classdef extract_clustered_data
                     end
                     timestring=sprintf('%s:%s:%s',hour_str,minute_str,second_str);
                     
-                    for j=1:size(data_good,1)                        
-                        fprintf(fileID,sprintf('%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n',data_good(j).detectorID,timestring,data_good(j).data.s_volume(i)/(3600/interval),...
-                            data_good(j).data.s_volume(i),data_good(j).data.s_occupancy(i),...
-                            data_good(j).data.s_speed(i),data_good(j).data.s_delay(i),data_good(j).data.s_stops(i)));
-                    end                    
+                    if(isempty(year))
+                        for j=1:size(data_good,1)
+                            fprintf(fileID,sprintf('%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n',...
+                                data_good(j).detectorID,timestring,data_good(j).data.s_volume(i)/(3600/interval),...
+                                data_good(j).data.s_volume(i),data_good(j).data.s_occupancy(i)/3600*100,...
+                                data_good(j).data.s_speed(i),data_good(j).data.s_delay(i),data_good(j).data.s_stops(i)));
+                        end
+                    else
+                        for j=1:size(data_good,1)
+                            fprintf(fileID,sprintf('%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s\n',...
+                                data_good(j).detectorID,timestring,data_good(j).data.s_volume(i)/(3600/interval),...
+                                data_good(j).data.s_volume(i),data_good(j).data.s_occupancy(i)/3600*100,...
+                                data_good(j).data.s_speed(i),data_good(j).data.s_delay(i),data_good(j).data.s_stops(i),...
+                                data_good(j).config.Movement));
+                        end
+                    end
                 end
 
                 fclose(fileID);

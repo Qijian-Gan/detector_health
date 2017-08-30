@@ -27,6 +27,8 @@ end
 % dp=load_detector_data('K:\Arcadia_data\2016_All');
 % dp=load_detector_data('K:\Arcadia_data\2017_All');
 dp=load_detector_data('K:\Arcadia_data\2017');
+% dp=load_detector_data('C:\Users\Qijian-Gan\Desktop\DetectorArchive');
+
 % dp=load_detector_data; % With empty input: Default folder ('data')
 
 fileList=dp.obtain_file_list(dp.folderLocation); % Get the list of detector files

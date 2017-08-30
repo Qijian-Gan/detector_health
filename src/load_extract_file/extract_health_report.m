@@ -130,10 +130,10 @@ classdef extract_health_report
             % Write daily performance            
             performanceGrade=extract_health_report.convert_from_number_to_Grade(performance);
             endColumn=10+size(performanceGrade,2);
-            numRound=floor(endColumn/26);
+            numRound=floor((endColumn-1)/26);
             if(numRound>0)
                 firstChar=char(numRound+'A'-1);
-                secondChar=char(mod(endColumn,26)+'A'-1);                
+                secondChar=char(mod(endColumn-1,26)+'A');                
                 asciiEndColumn = strcat(firstChar,secondChar);
             else
                 asciiEndColumn = char(endColumn+'A'-1);

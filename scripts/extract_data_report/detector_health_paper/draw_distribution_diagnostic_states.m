@@ -14,8 +14,8 @@ numDetector=length(detectorUnique);
 
 % Select the date
 dateUnique=unique(DetectorHealthAll(:,5));
-startDate=datenum('2015-7-1');
-endDate=datenum('2017-6-30');
+startDate=datenum('2017-7-1');
+endDate=datenum('2017-7-22');
 dateSelect=dateUnique(dateUnique>=startDate & dateUnique<endDate);
 numDate=length(dateSelect);
 
@@ -31,13 +31,13 @@ numDate=length(dateSelect);
 % colID=9; 
 % threshold=[0 1 2 5];
 
-% Check the inconsistent data: speed volume, occupancy
-colID=11; 
-threshold=[0 5 10 15];
-
-% % Check the inconsistent data: volume and occupancy
-% colID=12; 
+% % Check the inconsistent data: speed volume, occupancy
+% colID=11; 
 % threshold=[0 5 10 15];
+
+% Check the inconsistent data: volume and occupancy
+colID=12; 
+threshold=[0 5 10 15];
 
 % Start to perform the analysis
 countTable=zeros(numErrorStep,numDate);

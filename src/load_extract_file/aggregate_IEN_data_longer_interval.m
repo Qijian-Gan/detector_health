@@ -190,9 +190,18 @@ classdef aggregate_IEN_data_longer_interval
                 RawData=RawData(I,:);
                 RawTime=RawTime(I);
                 RawSpeed=str2double({RawData.Speed}');
+                idxSpeed=(RawSpeed<0);
+                RawSpeed(idxSpeed)=0;
+                
                 RawOccupancy=str2double({RawData.Occupancy}');
+                idxOcc=(RawOccupancy<0);
+                RawOccupancy(idxOcc)=0;
+                
                 RawVolume=str2double({RawData.Volume}');
+                idxVolume=(RawVolume<0);
+                RawVolume(idxVolume)=0;
 
+                
                 switch Method
                     case 'Interpolation'
                         Time=[];

@@ -3,11 +3,11 @@ clear
 clc
 close all
 
-% 
+
 % % Get the current folder
 % currentFileLoc=fullfile(findFolder.IEN_temp(),'\device_inventory');
 % tmpFiles=dir(currentFileLoc);
-% idx=strmatch('Detector_Inv_201704_LACO',{tmpFiles.name});
+% idx=strmatch('Detector_Inv_201705_LACO',{tmpFiles.name});
 % fileList=tmpFiles(idx,:);
 % 
 % DetInvAll=[];
@@ -34,8 +34,6 @@ IntAll=[{DetInvAllSort.AssociatedIntersectionID}',{DetInvAllSort.RoadName}',{Det
 IntAllUnique=IntAll(idx,:);
 LatLongPair=str2double(IntAllUnique(:,4:5))/1000000;
 
-
-
 IntAllUniqueSubnetwork=[];
 LatLongPairSubnetwork=[];
 for i=1:size(LatLongPair,1)
@@ -46,6 +44,21 @@ for i=1:size(LatLongPair,1)
     end    
 end
 
+DetIntAll=[{DetInvAllSort.DeviceID}',{DetInvAllSort.AssociatedIntersectionID}',{DetInvAllSort.RoadName}',{DetInvAllSort.CrossStreet}',{DetInvAllSort.Latitude}',...
+    {DetInvAllSort.Longitude}'];
+[~,idx]=unique(DetIntAll(:,1));
+DetIntAllUnique=DetIntAll(idx,:);
+DetLatLongPair=str2double(DetIntAllUnique(:,5:6))/1000000;
+
+DetIntAllUniqueSubnetwork=[];
+for i=1:size(DetLatLongPair,1)
+    if(DetLatLongPair(i,1)>SW(1)&&DetLatLongPair(i,1)<NW(1) &&...
+            DetLatLongPair(i,2)>NW(2)&& DetLatLongPair(i,2)<NE(2))
+        DetIntAllUniqueSubnetwork=[DetIntAllUniqueSubnetwork;DetIntAllUnique(i,:)];
+    end    
+end
+
+save('DetIntAllUniqueSubnetwork_LACO.mat','DetIntAllUniqueSubnetwork');
 save('IntAllUniqueSubnetwork_LACO.mat','IntAllUniqueSubnetwork');
 
 
@@ -78,7 +91,6 @@ SigAll=[{SigInvAllSort.DeviceID}',{SigInvAllSort.MainStreet}',{SigInvAllSort.Cro
 [~,idx]=unique(SigAll(:,1));
 SigAllUnique=SigAll(idx,:);
 LatLongPair=str2double(SigAllUnique(:,4:5))/1000000;
-
 
 
 SigAllUniqueSubnetwork=[];

@@ -1,17 +1,9 @@
-%% This script is used to draw missing data
-clear
-clc
-close all
+function plot_stability(DetectorHealthAll,detectorUnique,type)
 
-load('DetectorHealthAll.mat')
-
-% Number of detectors
-detectorUnique=unique(DetectorHealthAll(:,1));
-numDetector=length(detectorUnique);
+numDetector=size(detectorUnique,1);
 
 % Select the date
-date=[datenum('2015-7-1'),datenum('2016-1-1'),datenum('2016-7-1'),datenum('2017-1-1'),datenum('2017-7-1')];
-daymissing=[25,2,6,4];
+date=[datenum('2015-7-1'),datenum('2016-1-1'),datenum('2016-7-1'),datenum('2017-1-1'),datenum('2017-6-1')];
 totalStability=zeros(4,1);
 figure('Position',[283 432 723 474])
 hold on
@@ -20,8 +12,7 @@ for k=1:4
     idx=(DetectorHealthAll(:,5)>=date(k) & DetectorHealthAll(:,5)<date(k+1));
     HealthSelected=DetectorHealthAll(idx,:);
     
-%     numDay=date(k+1)-date(k);
-    numDay=date(k+1)-date(k)-daymissing(k);
+    numDay=date(k+1)-date(k);
     stateChange=zeros(numDetector,3);
     
     for i=1:numDetector
@@ -58,6 +49,7 @@ end
 formatOut = 'mm/dd/yy';
 xlabel('Percentage of switching times','FontSize',25)
 ylabel('Fraction (%) of detectors','FontSize',25)
+title(type,'FontSize',25)
 legend(...
     sprintf('Total Stability ([%s,%s])=%.2f%%',datestr(date(1),formatOut),datestr(date(2)-1,formatOut),totalStability(1)),...
     sprintf('Total Stability ([%s,%s])=%.2f%%',datestr(date(2),formatOut),datestr(date(3)-1,formatOut),totalStability(2)),...

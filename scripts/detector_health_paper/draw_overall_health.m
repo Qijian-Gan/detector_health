@@ -12,7 +12,7 @@ numDetector=length(detectorUnique);
 % Select the date
 dateUnique=unique(DetectorHealthAll(:,5));
 startDate=datenum('2015-7-1');
-endDate=datenum('2017-5-31');
+endDate=datenum('2017-6-30');
 dateSelect=dateUnique(dateUnique>=startDate & dateUnique<endDate);
 numDate=length(dateSelect);
 
@@ -41,8 +41,10 @@ figure('Position',[9 374 1269 528])
 plot(dateSelect,countTable(7,:)/numDetector*100,'-+r')
 xlabel('Date','FontSize',25)
 ylabel('Percentage','FontSize',25)
+set(gca, 'XLim',[startDate-5 endDate+5])
 h=get(gca,'XTick');
-hDateTime= datetime(h,'ConvertFrom','datenum');
+hDateTime= datestr(h,'mm-dd-yyyy');
+% hDateTime= datetime(h,'ConvertFrom','datenum');
 set(gca,'XTickLabel',cellstr(hDateTime))
 set(gca,'XTickLabelRotation',20);
 grid on

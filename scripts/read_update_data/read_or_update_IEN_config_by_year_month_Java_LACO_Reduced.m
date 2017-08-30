@@ -26,11 +26,14 @@ end
 
 % Load the IEN configuration data and get the list of files that are needed to be updated
 
-% currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
-% currentDataLoc='D:\BOX\Box Sync\IEN_Data';
-
 currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
-currentDataLoc='D:\BOX\IEN_Data';
+currentDataLoc='D:\BOX\Box Sync\IEN_Data';
+% currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
+% currentDataLoc='D:\BOX\IEN_Data_V1';
+
+% currentOrgLoc='D:\BOX\Box Sync\IEN_Data';
+% currentDataLoc='D:\BOX\IEN_Data';
+% currentDataLoc='D:\BOX\IEN_Data_Read_Test';
 movedFileLoc='D:\BOX\IEN_Data_Read';
 
 % currentDataLoc='D:\BOX\IEN_Data_Unprocessed';
@@ -64,7 +67,7 @@ save(fileNameOrg,'fileReadOrg');
 %% Read the detector files
 % First categorize the files by year-month
 [fileNameByYearMonth]=load_IEN_configuration.categorize_file_name_by_year_month({fileListData.name}');
-numOfFile=120;
+numOfFile=180;
 
 % Start parallel computing
 close all
@@ -72,10 +75,10 @@ delete(gcp('nocreate'));
 parpool;
 
 % Check whether the subnetwork of LACO is used or not
-if(exist('IntAllUniqueSubnetwork_LACO.mat','file'))
-    load('IntAllUniqueSubnetwork_LACO.mat'); % Variable: IntAllUniqueSubnetwork
+if(exist('DetIntAllUniqueSubnetwork_LACO.mat','file'))
+    load('DetIntAllUniqueSubnetwork_LACO.mat'); % Variable: DetIntAllUniqueSubnetwork
 else
-    IntAllUniqueSubnetwork=[];
+    DetIntAllUniqueSubnetwork=[];
 end
 if(exist('SigAllUniqueSubnetwork_LACO.mat','file'))
     load('SigAllUniqueSubnetwork_LACO.mat'); % Variable: SigAllUniqueSubnetwork
@@ -130,42 +133,42 @@ for t=1:size(fileNameByYearMonth,1)
         % Save device inventory
         if(~isempty(DevInv))
             disp('Saving/Updating device inventory!')
-            dp.save_data_by_year_month(DevInv,'DevInv',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(DevInv,'DevInv',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         clear DevInv
         
         % Save device data
         if(~isempty(DevData))
             disp('Saving/Updating device data!')
-            dp.save_data_by_year_month(DevData,'DevData',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(DevData,'DevData',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         clear DevData
         
         % Save signal inventory
         if(~isempty(SigInv))
             disp('Saving/Updating intersection signal inventory!')
-            dp.save_data_by_year_month(SigInv,'SigInv',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(SigInv,'SigInv',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         clear SigInv
         
         % Save signal data
         if(~isempty(SigData))
             disp('Saving/Updating intersection signal data!')
-            dp.save_data_by_year_month(SigData,'SigData',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(SigData,'SigData',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         clear SigData
         
         % Save planned phases
         if(~isempty(PlanPhase))
             disp('Saving/Updating signal planned phase!')
-            dp.save_data_by_year_month(PlanPhase,'PlanPhase',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(PlanPhase,'PlanPhase',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         clear PlanPhase
         
         % Save last-cycle phases
         if(~isempty(LastCyclePhase))
             disp('Saving/Updating signal last-cycle phase!')
-            dp.save_data_by_year_month(LastCyclePhase,'LastCyclePhase',strYearMonth,IntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
+            dp.save_data_by_year_month(LastCyclePhase,'LastCyclePhase',strYearMonth,DetIntAllUniqueSubnetwork,SigAllUniqueSubnetwork)
         end
         toc
         clear LastCyclePhase

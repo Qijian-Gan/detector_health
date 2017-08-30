@@ -51,22 +51,61 @@ classdef health_analysis_update_criteria
             for i=1:this.numCases % Loop for all available cases in the input data
                 
                 % Get the ID, year, month, and day first
-                metrics.DetectorID=this.cases(i,1);
+                
                 metrics.Year=this.cases(i,2);
                 metrics.Month=this.cases(i,3);
                 metrics.Day=this.cases(i,4);
                 
-                idx=ismember(this.laneInformation(:,1),this.cases(i,1));
-                if(sum(idx)>0)
-                    numLane=this.laneInformation(idx,2);
-                else
-                    numLane=1;
-                    disp(strcat('A new detector with ID=',num2str(metrics.DetectorID)));
-                end
-                
                 % Also get the date number in matlab so that it would be
                 % easier for later usage
                 metrics.DateNum=datenum(sprintf('%d-%d-%d',metrics.Year,metrics.Month,metrics.Day));
+                
+                if(size(this.laneInformation,2)==2) % Original source from Arcadia's TCS server
+                    metrics.DetectorID=this.cases(i,1);
+                    idx=ismember(this.laneInformation(:,1),this.cases(i,1));
+                    if(sum(idx)>0)
+                        numLane=this.laneInformation(idx,2);
+                    else
+                        numLane=1;
+                        disp(strcat('A new detector with ID=',num2str(metrics.DetectorID)));
+                    end
+                else % A new source from IEN
+                    
+                    idx=ismember(this.laneInformation(:,1),this.cases(i,1));
+                    
+                    if(sum(idx)>0) % Arcadia's data
+                        metrics.Organization={'Arcadia'};
+                        metrics.DetectorID=this.cases(i,1);
+                        numLane=max(this.laneInformation(idx,2)); % May be multiple lane numbers
+                    else
+                        % Get the subset of LACO detectors
+                        idxOrg=(this.laneInformation(:,3)==29);
+                        tmpLaneInformation=this.laneInformation(idxOrg,:);
+                        
+                        tmpID=mod(tmpLaneInformation(:,1),10000); % Get rid of the intersection ID
+                        idx=ismember(tmpID,this.cases(i,1));
+                        if(sum(idx)>0) % LACO's data
+                            metrics.Organization={'LACO'};
+                            metrics.DetectorID=unique(tmpLaneInformation(idx,1));
+                            numLane=max(tmpLaneInformation(idx,2)); % May be multiple lane numbers
+                        else % Unkown
+                            % Arcadia's detector is with 6 digits; LACO's
+                            % detector is more than 6 digits
+                            if(this.cases(i,1)<999999 && this.cases(i,1)>99999) % 6 digits ?
+                                metrics.Organization={'Arcadia'};
+                                metrics.DetectorID=this.cases(i,1);
+                                numLane=1;
+                                disp(strcat('A new detector with ID=',num2str(metrics.DetectorID)));
+                            else
+                                metrics.Organization={'Unknown'};
+                                metrics.DetectorID=this.cases(i,1);
+                                numLane=1;
+                                disp(strcat('A new detector with ID=',num2str(metrics.DetectorID)));
+                            end
+                        end
+                    end
+                end
+                
                 
                 % Get the data for that given case
                 tmpData=this.get_data_for_day_and_ID(this.cases(i,:));
@@ -244,6 +283,11 @@ classdef health_analysis_update_criteria
                 end
             end
                 
+            % Check the last step: Extreme case with all zero values
+            if(cur_missing_length>=maxLengthZeroValues)
+                maxLengthZeroValues=cur_missing_length;
+            end
+            
             maxLengthZeroValues=maxLengthZeroValues*interval/3600; % Return the value in hours
         end
      

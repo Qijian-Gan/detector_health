@@ -143,7 +143,7 @@ classdef sensor_count_provider
             % This function is to cluster the data by query measures
             
             if(~isnan(queryMeasures.year))
-                byYear=quaryMeasures.year; % Get the year
+                byYear=queryMeasures.year; % Get the year
             else
                 byYear=0; % False
             end
@@ -280,9 +280,13 @@ classdef sensor_count_provider
                     tmp_speed=[];
                     tmp_delay=[];
                     tmp_stops=[];
-                    for i=1:size(tmp_volume,2) % Loop for each timestamp
+                    
+                                       
+                    for i=1:size(tmp_volume,2) % Loop for each timestamp  
+                        first_val=nan;
+                        second_val=nan; 
                         idx=(volume(:,i)==tmp_volume(i)); % Find the index that has the same volume
-                        if(sum(idx)==0)
+                        if(sum(idx)==0)                            
                             tmp=sort(volume(:,i));
                             symbol1=0;
                             symbol2=0;
@@ -304,11 +308,18 @@ classdef sensor_count_provider
                                     
                         % Take the mean value of occupancy, speed, delay,
                         % and stops
-                        tmp_occupancy=[tmp_occupancy,mean(occupancy(idx,i),'omitnan')]; 
-                        tmp_speed=[tmp_speed,mean(speed(idx,i),'omitnan')];
-                        tmp_delay=[tmp_delay,mean(delay(idx,i),'omitnan')];
-                        tmp_stops=[tmp_stops,mean(stops(idx,i),'omitnan')];
-                    end                    
+                        if(sum(idx)==0 &&(isnan(first_val)||isnan(second_val)))
+                            tmp_occupancy=[tmp_occupancy,nan];
+                            tmp_speed=[tmp_speed,nan];
+                            tmp_delay=[tmp_delay,nan];
+                            tmp_stops=[tmp_stops,nan];
+                        else
+                            tmp_occupancy=[tmp_occupancy,mean(occupancy(idx,i),'omitnan')];
+                            tmp_speed=[tmp_speed,mean(speed(idx,i),'omitnan')];
+                            tmp_delay=[tmp_delay,mean(delay(idx,i),'omitnan')];
+                            tmp_stops=[tmp_stops,mean(stops(idx,i),'omitnan')];
+                        end
+                    end
                 else
                     tmp_volume=mean(vertcat(data.s_volume),'omitnan');
                     tmp_occupancy=mean(vertcat(data.s_occupancy),'omitnan');

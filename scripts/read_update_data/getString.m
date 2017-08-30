@@ -29,6 +29,27 @@ Direction=arrayString(:,11:intervalDevInv:end)';
 AvgPeriod=arrayString(:,12:intervalDevInv:end)';
 AssIntID=arrayString(:,13:intervalDevInv:end)';
 
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    Description(idx)=[];
+    RoadName(idx)=[];
+    CrossStreet(idx)=[];
+    Latitude(idx)=[];
+    Longitude(idx)=[];
+    Direction(idx)=[];
+    AvgPeriod(idx)=[];
+    AssIntID(idx)=[];
+end
+
 DevInv=dp.dataFormatDevInv(OrgID,DeviceID,LastUpdate,Date,Time,Description,RoadName,CrossStreet,...
     Latitude,Longitude,Direction,AvgPeriod,AssIntID);
 
@@ -95,6 +116,25 @@ CrossStreet=arrayString(:,9:intervalIntSigInv:end)';
 Latitude=arrayString(:,10:intervalIntSigInv:end)';
 Longitude=arrayString(:,11:intervalIntSigInv:end)';
 
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    SignalType(idx)=[];
+    Description(idx)=[];
+    MainStreet(idx)=[];
+    CrossStreet(idx)=[];
+    Latitude(idx)=[];
+    Longitude(idx)=[];    
+end
+
 IntSigInv=dp.dataFormatSigInv(OrgID,DeviceID,LastUpdate,Date,Time,SignalType,Description,MainStreet,...
     CrossStreet,Latitude,Longitude);
 
@@ -118,6 +158,26 @@ DesiredOffset=arrayString(:,10:intervalIntSigData:end)';
 ActualOffset=arrayString(:,11:intervalIntSigData:end)';
 ControlMode=arrayString(:,12:intervalIntSigData:end)';
 
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    CommState(idx)=[];
+    SignalState(idx)=[];
+    TimingPlan(idx)=[];
+    DesiredCycleLength(idx)=[];
+    DesiredOffset(idx)=[];
+    ActualOffset(idx)=[];    
+    ControlMode(idx)=[];
+end
+
 IntSigData=dp.dataFormatSigData(OrgID,DeviceID,LastUpdate,Date,Time,CommState,SignalState,TimingPlan,...
     DesiredCycleLength,DesiredOffset,ActualOffset,ControlMode);
 
@@ -134,6 +194,20 @@ LastUpdate=arrayString(:,3:intervalPlanPhase:end)';
 Date=arrayString(:,4:intervalPlanPhase:end)';
 Time=arrayString(:,5:intervalPlanPhase:end)';
 PhaseTime=arrayString(:,6:intervalPlanPhase:end)';
+
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    PhaseTime(idx)=[];
+end
 
 PlanPhase=dp.dataFormatPhase(OrgID,DeviceID,LastUpdate,Date,Time,PhaseTime);
 
@@ -152,6 +226,20 @@ Time=arrayString(:,5:intervalLastCyclePhase:end)';
 LastCycle=arrayString(:,6:intervalLastCyclePhase:end)';
 PhaseTime=arrayString(:,7:intervalLastCyclePhase:end)';
 
+% There is something wrong with "date" in Arcadia's data
+dateNumTmp=datenum(Date,'yyyy.mm.dd');
+dateMostFrequent=mode(dateNumTmp);
+difference=abs(dateNumTmp-dateMostFrequent);
+idx=(difference>1);
+if(sum(idx))
+    OrgID(idx)=[];
+    DeviceID(idx)=[];
+    LastUpdate(idx)=[];
+    Date(idx)=[];
+    Time(idx)=[];
+    LastCycle(idx)=[];
+    PhaseTime(idx)=[];
+end
 LastCyclePhase=dp.dataFormatPhaseLastCycle(OrgID,DeviceID,LastUpdate,Date,Time,LastCycle,PhaseTime);
 
 
